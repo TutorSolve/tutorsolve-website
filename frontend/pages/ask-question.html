@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ask a Question - TutorSolve</title>
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/ask-question.css" />
+  </head>
+  <body class="ask-page">
+    <header class="header">
+      <div class="nav-inner">
+        <a href="/index.html" class="logo">
+          <img src="/assets/logo.svg" alt="TutorSolve" />
+          <span>TutorSolve</span>
+        </a>
+        <nav>
+          <ul class="nav-links">
+            <li>
+              <a href="/index.html#how-it-works" class="nav-link"
+                >How it Works</a
+              >
+            </li>
+            <li>
+              <a href="/pages/ask-question.html" class="nav-link"
+                >Ask a Question</a
+              >
+            </li>
+            <li>
+              <a href="/pages/experts.html" class="nav-link">Our Experts</a>
+            </li>
+            <li>
+              <a href="/index.html#testimonials" class="nav-link">Reviews</a>
+            </li>
+          </ul>
+        </nav>
+        <div class="nav-actions">
+          <a href="/auth/login.html" class="btn btn-ghost btn-sm">Login</a>
+          <a href="/auth/signup.html" class="btn btn-secondary btn-sm"
+            >Sign Up</a
+          >
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="ask-hero">
+        <div class="container">
+          <a href="/index.html" class="ask-back-link">Back to home</a>
+          <h1 class="ask-title">Ask Your Question</h1>
+        </div>
+      </section>
+
+      <section class="ask-layout">
+        <div class="container">
+          <div class="ask-grid">
+            <div class="ask-card">
+              <div class="form-group">
+                <label class="label" for="ask-title">Title</label>
+                <input
+                  id="ask-title"
+                  type="text"
+                  class="input"
+                  placeholder="E.g. Help with Calculus assignment"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="label" for="ask-domain">Domain</label>
+                <select id="ask-domain" class="input">
+                  <option value="">Loading domains...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="label" for="ask-description"
+                  >Description (Optional)</label
+                >
+                <textarea
+                  id="ask-description"
+                  class="input"
+                  rows="5"
+                  placeholder="Describe your question, expected output, and special instructions..."
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="label" for="ask-deadline"
+                  >Deadline
+                  <span style="color: var(--color-gray-500); font-weight: 400"
+                    >(Optional)</span
+                  ></label
+                >
+                <input id="ask-deadline" type="date" class="input" />
+              </div>
+
+              <div class="form-group">
+                <label class="label">Attachments</label>
+                <div id="ask-upload-zone" class="ask-upload-zone">
+                  <p><strong>Click or drag files here</strong></p>
+                  <p class="ask-upload-note">Maximum 20 MB per file</p>
+                </div>
+                <input
+                  id="ask-file-input"
+                  type="file"
+                  multiple
+                  style="display: none"
+                />
+                <div id="ask-file-list" class="ask-file-list"></div>
+              </div>
+
+              <button
+                id="ask-submit-btn"
+                class="btn btn-primary btn-lg"
+                style="width: 100%"
+              >
+                Submit Question
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/js/runtime-env.js"></script>
+    <script src="/js/runtime-config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/pending-question.js"></script>
+    <script src="/js/ask-question.js"></script>
+  </body>
+</html>

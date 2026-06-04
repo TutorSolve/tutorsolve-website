@@ -1,0 +1,10 @@
+{
+  "name": "tutorsolve-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node ./scripts/start-static.js"
+  },
+  "dependencies": {
+    "serve": "14.2.6"
+  }
+}

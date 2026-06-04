@@ -1,0 +1,1354 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Users — TutorSolve</title>
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/super-admin.css" />
+  </head>
+
+  <body>
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <img src="/assets/logo.svg" alt="TutorSolve" width="28" />
+          <span class="navbar-logo-text">TutorSolve</span>
+        </div>
+
+        <nav class="sidebar-nav">
+          <p class="sidebar-section-label">Overview</p>
+          <a
+            href="/super-admin/dashboard.html"
+            class="sidebar-item"
+            data-page="dashboard"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <rect x="1" y="1" width="6" height="6" rx="1" />
+              <rect x="9" y="1" width="6" height="6" rx="1" />
+              <rect x="1" y="9" width="6" height="6" rx="1" />
+              <rect x="9" y="9" width="6" height="6" rx="1" />
+            </svg>
+            Dashboard
+          </a>
+
+          <p class="sidebar-section-label" style="margin-top: var(--space-4)">
+            Finance
+          </p>
+          <a
+            href="/super-admin/financials.html"
+            class="sidebar-item"
+            data-page="financials"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M8 2v12M5 5h4.5a2.5 2.5 0 010 5H5M5 7h5" />
+            </svg>
+            Financials
+          </a>
+
+          <p class="sidebar-section-label" style="margin-top: var(--space-4)">
+            Operations
+          </p>
+          <a href="/super-admin/kyc.html" class="sidebar-item" data-page="kyc">
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <rect x="2" y="2" width="12" height="12" rx="2" />
+              <path d="M5 8h6M5 5h6M5 11h4" />
+            </svg>
+            KYC Queue
+          </a>
+          <a
+            href="/super-admin/users.html"
+            class="sidebar-item"
+            data-page="users"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <circle cx="6" cy="5" r="3" />
+              <path d="M1 13c0-2.761 2.239-5 5-5" />
+              <path d="M11 8v6M14 11H8" />
+            </svg>
+            Users
+          </a>
+          <a
+            href="/super-admin/chat-spy.html"
+            class="sidebar-item"
+            data-page="chat-spy"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" />
+              <circle cx="8" cy="8" r="2" />
+            </svg>
+            Chat Spy
+          </a>
+          <a
+            href="/super-admin/profile.html"
+            class="sidebar-item"
+            data-page="profile"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <circle cx="8" cy="5" r="3" />
+              <path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" />
+            </svg>
+            Profile
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button
+            onclick="logout()"
+            class="sidebar-item"
+            style="
+              width: 100%;
+              border: none;
+              background: none;
+              cursor: pointer;
+              text-align: left;
+            "
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path
+                d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6"
+              />
+            </svg>
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      <main class="dashboard-main users-dashboard-main">
+        <div class="dashboard-main-inner users-main-inner">
+          <div class="page-header">
+            <h1 class="page-title">User Management</h1>
+            <button
+              id="add-employee-btn"
+              class="btn btn-primary btn-sm"
+              onclick="showCreateEmployee()"
+            >
+              + Add Employee
+            </button>
+          </div>
+
+          <!-- Role filter tabs -->
+          <div class="sa-tabs">
+            <button
+              class="sa-tab active"
+              data-role=""
+              onclick="loadUsers('', this)"
+            >
+              All
+            </button>
+            <button
+              class="sa-tab"
+              data-role="student"
+              onclick="loadUsers('student', this)"
+            >
+              Students
+            </button>
+            <button
+              class="sa-tab"
+              data-role="expert"
+              onclick="loadUsers('expert', this)"
+            >
+              Experts
+            </button>
+            <button
+              class="sa-tab"
+              data-role="employee"
+              onclick="loadUsers('employee', this)"
+            >
+              Employees
+            </button>
+          </div>
+
+          <div id="users-list"></div>
+
+          <!-- Create Employee Modal -->
+          <div id="create-employee-modal" class="modal">
+            <div class="modal-content">
+              <h3 class="modal-title">Add Employee Admin</h3>
+              <div class="modal-body">
+                <div class="form-group">
+                  <label class="label">Name</label>
+                  <input
+                    id="emp-name"
+                    type="text"
+                    class="input"
+                    placeholder="Full name"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="label">Email</label>
+                  <input
+                    id="emp-email"
+                    type="email"
+                    class="input"
+                    placeholder="employee@example.com"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="label">Password</label>
+                  <div class="password-wrapper">
+                    <input
+                      id="emp-password"
+                      type="password"
+                      class="input"
+                      placeholder="Min. 8 characters"
+                    />
+                    <button class="password-toggle" type="button">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path
+                          d="M1 12s4-8 11-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                        ></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-actions">
+                <button class="btn btn-secondary btn-md" onclick="closeModal()">
+                  Cancel
+                </button>
+                <button
+                  class="btn btn-primary btn-md"
+                  onclick="createEmployee()"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            id="ban-confirm-modal"
+            class="modal"
+            onclick="handleBanModalBackdrop(event)"
+          >
+            <div class="modal-content modal-content--compact">
+              <h3 id="ban-confirm-title" class="modal-title">Confirm action</h3>
+              <div class="modal-body">
+                <p id="ban-confirm-message" class="confirm-message">
+                  Are you sure you want to continue?
+                </p>
+              </div>
+              <div class="modal-actions">
+                <button
+                  class="btn btn-secondary btn-md"
+                  onclick="closeBanConfirmModal()"
+                >
+                  Cancel
+                </button>
+                <button
+                  id="ban-confirm-btn"
+                  class="btn btn-primary btn-md"
+                  onclick="confirmToggleBanAction()"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/js/runtime-env.js"></script>
+    <script src="/js/runtime-config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/chat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+      if (!requireRole("super_admin")) throw new Error("Abort");
+      document.querySelector('[data-page="users"]')?.classList.add("active");
+
+      let currentRoleFilter = "";
+      let superAdminUserId = null;
+      let expertRows = [];
+      let selectedExpertUserId = null;
+      let selectedExpertThreadId = null;
+      let selectedExpertData = null;
+      let expertSearchTimeout = null;
+      let employeeRows = [];
+      let selectedEmployeeUserId = null;
+      let selectedEmployeeThreadId = null;
+      let selectedEmployeeData = null;
+      let employeeSearchTimeout = null;
+      let pendingBanAction = null;
+      let launchSelectionApplied = false;
+      const chatStores = {
+        expert: { rows: [], query: "", loaded: false, loading: false },
+        employee: { rows: [], query: "", loaded: false, loading: false },
+      };
+      const launchParams = new URLSearchParams(window.location.search);
+      const launchRoleParam = (launchParams.get("role") || "")
+        .trim()
+        .toLowerCase();
+      const launchExpertUserId = (
+        launchParams.get("openExpertUser") || ""
+      ).trim();
+      const launchEmployeeUserId = (
+        launchParams.get("openEmployeeUser") || ""
+      ).trim();
+      const launchRole =
+        launchRoleParam === "student" ||
+        launchRoleParam === "expert" ||
+        launchRoleParam === "employee"
+          ? launchRoleParam
+          : launchExpertUserId
+            ? "expert"
+            : launchEmployeeUserId
+              ? "employee"
+              : "";
+      let launchExpertApplied = false;
+      let launchEmployeeApplied = false;
+
+      function setActiveTab(role = "", activeTab = null) {
+        const tabs = document.querySelectorAll(".sa-tab");
+        tabs.forEach((t) => t.classList.remove("active"));
+
+        if (activeTab) {
+          activeTab.classList.add("active");
+          return;
+        }
+
+        const target = document.querySelector(`.sa-tab[data-role="${role}"]`);
+        (target || tabs[0])?.classList.add("active");
+      }
+
+      function setAddEmployeeVisibility(role = "") {
+        const btn = document.getElementById("add-employee-btn");
+        if (!btn) return;
+        const show = role === "" || role === "employee";
+        btn.style.display = show ? "inline-flex" : "none";
+      }
+
+      function setExpertMode(isExpert) {
+        const inner = document.querySelector(".users-main-inner");
+        const main = document.querySelector(".users-dashboard-main");
+        inner?.classList.toggle("expert-mode", isExpert);
+        main?.classList.toggle("expert-mode", isExpert);
+      }
+
+      async function ensureSuperAdminUserId() {
+        if (superAdminUserId) return superAdminUserId;
+        const meRes = await apiFetch("/auth/me");
+        if (!meRes?.ok) throw new Error("Failed to resolve user profile.");
+        const me = await meRes.json();
+        superAdminUserId = me.id;
+        return superAdminUserId;
+      }
+
+      async function loadUsers(role = "", activeTab = null) {
+        currentRoleFilter = role || "";
+        setActiveTab(currentRoleFilter, activeTab);
+        setAddEmployeeVisibility(currentRoleFilter);
+        setExpertMode(
+          currentRoleFilter === "expert" || currentRoleFilter === "employee",
+        );
+
+        if (!["expert", "employee"].includes(currentRoleFilter)) {
+          destroyChat();
+          selectedExpertThreadId = null;
+          selectedExpertUserId = null;
+          selectedExpertData = null;
+          selectedEmployeeThreadId = null;
+          selectedEmployeeUserId = null;
+          selectedEmployeeData = null;
+        }
+
+        if (currentRoleFilter === "expert") {
+          renderExpertChatWorkspace();
+          await loadExpertList("", true, false);
+          if (!launchSelectionApplied && launchExpertUserId) {
+            launchSelectionApplied = true;
+            await openExpertChat(launchExpertUserId);
+          } else {
+            launchSelectionApplied = true;
+          }
+          return;
+        }
+
+        if (currentRoleFilter === "employee") {
+          renderEmployeeChatWorkspace();
+          await loadEmployeeList("", true, false);
+          if (!launchSelectionApplied && launchEmployeeUserId) {
+            launchSelectionApplied = true;
+            await openEmployeeChat(launchEmployeeUserId);
+          } else {
+            launchSelectionApplied = true;
+          }
+          return;
+        }
+
+        const url = currentRoleFilter
+          ? `/superadmin/users?role=${currentRoleFilter}`
+          : "/superadmin/users";
+        const res = await apiFetch(url);
+        if (!res?.ok) {
+          toast("Failed to load users.", "error");
+          return;
+        }
+        const users = await res.json();
+        const list = document.getElementById("users-list");
+
+        if (!users.length) {
+          list.innerHTML = `<div class="empty-state"><h3>No users found</h3></div>`;
+          return;
+        }
+
+        const showRoleColumn = currentRoleFilter !== "student";
+        const showDeleteButton =
+          currentRoleFilter !== "" && currentRoleFilter !== "student";
+
+        list.innerHTML = `
+      <div class="sa-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              ${showRoleColumn ? `<th>Role</th>` : ""}
+              <th>Status</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${users
+              .map(
+                (u) => `
+              <tr id="user-row-${u._id}">
+                <td>${escapeHtml(u.email)}</td>
+                ${showRoleColumn ? `<td><span class="badge badge-${roleBadge(u.role)}">${u.role}</span></td>` : ""}
+                <td>
+                  ${
+                    u.is_banned
+                      ? `<span class="badge badge-refunded">Banned</span>`
+                      : `<span class="badge badge-completed">Active</span>`
+                  }
+                </td>
+                <td>${formatDate(u.created_at)}</td>
+                <td>
+                  <div style="display:flex;gap:var(--space-2)">
+                    ${
+                      u.is_banned
+                        ? `<button class="btn btn-secondary btn-sm" onclick="confirmToggleBan('${u._id}', false, this)">Unban</button>`
+                        : `<button class="btn btn-secondary btn-sm" onclick="confirmToggleBan('${u._id}', true, this)">Ban</button>`
+                    }
+                    ${
+                      showDeleteButton
+                        ? `<button class="btn btn-ghost btn-sm" style="color:var(--color-danger)"
+                          onclick="deleteUser('${u._id}', '${u.role}', this)">Delete</button>`
+                        : ""
+                    }
+                  </div>
+                </td>
+              </tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>`;
+      }
+
+      function renderExpertChatWorkspace() {
+        const list = document.getElementById("users-list");
+        list.innerHTML = `
+          <div class="expert-chat-shell">
+            <aside class="expert-chat-sidebar">
+              <div class="expert-chat-search-wrap">
+                <input
+                  id="expert-chat-search"
+                  type="search"
+                  class="input"
+                  placeholder="Search experts by name, email or domain"
+                  oninput="handleExpertSearchInput()"
+                />
+              </div>
+              <div id="expert-chat-list" class="expert-chat-list"></div>
+            </aside>
+            <section id="expert-chat-main" class="expert-chat-main">
+              <div class="expert-chat-empty">Select an expert to open chat.</div>
+            </section>
+          </div>
+        `;
+      }
+
+      function kycChipClass(status) {
+        const value = (status || "").toLowerCase();
+        if (value === "approved") return "ok";
+        if (value === "rejected") return "danger";
+        return "warn";
+      }
+
+      function kycLabel(status) {
+        const value = (status || "pending").toString().replace(/_/g, " ");
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      }
+
+      function formatUnreadCount(count) {
+        const value = Number(count) || 0;
+        return value > 99 ? "99+" : String(value);
+      }
+
+      async function markSuperAdminThreadRead(threadId) {
+        if (!threadId) return;
+        try {
+          await apiFetch(`/superadmin/chats/${threadId}/read`, {
+            method: "POST",
+          });
+        } catch (_err) {
+          // Best-effort read receipts should not interrupt chat.
+        }
+      }
+
+      function applyUnreadNotification(
+        rows,
+        selectedThreadId,
+        renderList,
+        data,
+      ) {
+        const threadId = data?.thread_id;
+        if (!threadId) return false;
+
+        const row = rows.find((item) => item.thread_id === threadId);
+        if (!row) return false;
+
+        const isActiveThread = selectedThreadId === threadId;
+        row.last_message_preview =
+          data.preview || row.last_message_preview || "New message";
+        row.last_message_at = new Date().toISOString();
+        row.unread_count = isActiveThread
+          ? 0
+          : (Number(row.unread_count) || 0) + 1;
+        rows.sort((a, b) =>
+          (b.last_message_at || "").localeCompare(a.last_message_at || ""),
+        );
+        renderList();
+
+        if (isActiveThread) {
+          markSuperAdminThreadRead(threadId);
+        }
+        return true;
+      }
+
+      function handleSuperAdminChatNotification(data) {
+        if (!data || data.type !== "new_message") return;
+
+        if (currentRoleFilter === "expert") {
+          const applied = applyUnreadNotification(
+            expertRows,
+            selectedExpertThreadId,
+            renderExpertList,
+            data,
+          );
+          if (!applied) {
+            const query =
+              document.getElementById("expert-chat-search")?.value.trim() || "";
+            loadExpertList(query, true, true);
+          }
+          return;
+        }
+
+        if (currentRoleFilter === "employee") {
+          const applied = applyUnreadNotification(
+            employeeRows,
+            selectedEmployeeThreadId,
+            renderEmployeeList,
+            data,
+          );
+          if (!applied) {
+            const query =
+              document.getElementById("employee-chat-search")?.value.trim() ||
+              "";
+            loadEmployeeList(query, true, true);
+          }
+        }
+      }
+
+      function attachSuperAdminChatNotificationListener() {
+        const socket =
+          typeof getChatSocket === "function" ? getChatSocket() : null;
+        if (!socket) return;
+        socket.off("notification", handleSuperAdminChatNotification);
+        socket.on("notification", handleSuperAdminChatNotification);
+      }
+
+      function renderExpertList() {
+        const listEl = document.getElementById("expert-chat-list");
+        if (!listEl) return;
+
+        if (!expertRows.length) {
+          listEl.innerHTML = `<div class="empty-state" style="padding:40px 16px"><p>No experts found.</p></div>`;
+          return;
+        }
+
+        listEl.innerHTML = expertRows
+          .map((row) => {
+            const isActive = row.user_id === selectedExpertUserId;
+            const unreadCount = Number(row.unread_count) || 0;
+            const preview = row.last_message_preview || "No messages yet.";
+            const status = row.is_banned ? "Banned" : "Active";
+            return `
+              <div
+                class="expert-chat-list-item ${isActive ? "active" : ""} ${unreadCount > 0 ? "unread" : ""}"
+                onclick="openExpertChat('${row.user_id}')"
+              >
+                <div class="expert-chat-list-title-row">
+                  <div class="expert-chat-list-title">${escapeHtml(row.name)}</div>
+                  ${
+                    unreadCount > 0
+                      ? `<span class="expert-chat-unread-pill">${formatUnreadCount(unreadCount)}</span>`
+                      : ""
+                  }
+                </div>
+                <div class="expert-chat-list-sub">${escapeHtml(row.email)} · ${escapeHtml(row.domain || "Unknown")}</div>
+                <div class="expert-chat-list-preview">${escapeHtml(status)} · ${escapeHtml(preview)}</div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      async function loadExpertList(
+        query = "",
+        preserveSelection = true,
+        refreshActiveView = false,
+      ) {
+        const cachedRows =
+          chatStores.expert.loaded && chatStores.expert.query === query
+            ? chatStores.expert.rows
+            : null;
+
+        if (cachedRows) {
+          expertRows = cachedRows;
+          renderExpertList();
+          if (!refreshActiveView) return;
+        }
+
+        const listEl = document.getElementById("expert-chat-list");
+        if (!cachedRows && listEl) {
+          listEl.innerHTML = `<div class="empty-state" style="padding:40px 16px"><p>Loading experts...</p></div>`;
+        }
+
+        if (cachedRows && !refreshActiveView) return;
+        if (chatStores.expert.loading) return;
+
+        chatStores.expert.loading = true;
+        const qs = query ? `?q=${encodeURIComponent(query)}` : "";
+        const res = await apiFetch(`/superadmin/expert-chats${qs}`);
+        chatStores.expert.loading = false;
+
+        if (!res?.ok) {
+          if (listEl) {
+            listEl.innerHTML = `<div class="empty-state" style="padding:40px 16px"><p>Failed to load experts.</p></div>`;
+          }
+          toast("Could not load expert chats.", "error");
+          return;
+        }
+
+        expertRows = await res.json();
+        chatStores.expert.rows = expertRows;
+        chatStores.expert.query = query;
+        chatStores.expert.loaded = true;
+        renderExpertList();
+
+        if (!expertRows.length) {
+          selectedExpertUserId = null;
+          selectedExpertThreadId = null;
+          selectedExpertData = null;
+          destroyChat();
+          const main = document.getElementById("expert-chat-main");
+          if (main) {
+            main.innerHTML = `<div class="expert-chat-empty">No experts match this search.</div>`;
+          }
+          return;
+        }
+
+        const hasSelected = expertRows.some(
+          (row) => row.user_id === selectedExpertUserId,
+        );
+
+        if (preserveSelection && hasSelected && selectedExpertThreadId) {
+          if (!refreshActiveView) return;
+          const fresh = expertRows.find(
+            (row) => row.user_id === selectedExpertUserId,
+          );
+          if (fresh) {
+            selectedExpertData = { ...(selectedExpertData || {}), ...fresh };
+            renderSelectedExpertHeader();
+            await ensureSuperAdminUserId();
+            destroyChat();
+            initStudentChat(
+              selectedExpertThreadId,
+              superAdminUserId,
+              "sae-chat-messages",
+            );
+            attachSuperAdminChatNotificationListener();
+          }
+          return;
+        }
+
+        if (!preserveSelection && expertRows[0]) {
+          await openExpertChat(expertRows[0].user_id);
+        }
+      }
+
+      function renderSelectedExpertHeader() {
+        const main = document.getElementById("expert-chat-main");
+        if (!main || !selectedExpertData) return;
+
+        const statusText = selectedExpertData.is_banned ? "Banned" : "Active";
+        const statusClass = selectedExpertData.is_banned ? "danger" : "ok";
+        const banAction = selectedExpertData.is_banned ? "Unban" : "Ban";
+        const domain = selectedExpertData.domain || "Unknown";
+
+        main.innerHTML = `
+          <div class="expert-chat-header">
+            <div>
+              <h3>${escapeHtml(selectedExpertData.name || "Expert")}</h3>
+              <div class="expert-chat-header-sub">${escapeHtml(selectedExpertData.email || "")}</div>
+              <div class="expert-chat-meta-row">
+                <span class="expert-chat-meta-chip">Joined ${formatDate(selectedExpertData.joined_at)}</span>
+                <span class="expert-chat-meta-chip ${statusClass}">${statusText}</span>
+                <span class="expert-chat-meta-chip">${escapeHtml(domain)}</span>
+                <span class="expert-chat-meta-chip ${kycChipClass(selectedExpertData.kyc_status)}">KYC: ${escapeHtml(kycLabel(selectedExpertData.kyc_status))}</span>
+              </div>
+            </div>
+            <div class="expert-chat-actions">
+              <span id="chat-status" class="expert-chat-header-sub"></span>
+              <button class="btn btn-secondary btn-sm" onclick="toggleSelectedExpertBan(this)">
+                ${banAction} Expert
+              </button>
+            </div>
+          </div>
+          <div class="expert-chat-thread">
+            <div id="sae-chat-messages" class="chat-messages">
+              <p style="color:var(--color-gray-400);text-align:center;font-size:14px;margin-top:20px;">Fetching chat...</p>
+            </div>
+            <div class="expert-chat-composer">
+              <input
+                id="sae-chat-input"
+                type="text"
+                class="input"
+                placeholder="Type a message..."
+                maxlength="1500"
+              />
+              <button id="sae-chat-send-btn" class="btn btn-primary btn-sm" onclick="sendExpertChatMessage()">Send</button>
+            </div>
+          </div>
+        `;
+
+        const input = document.getElementById("sae-chat-input");
+        input?.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            sendExpertChatMessage();
+          }
+        });
+      }
+
+      async function openExpertChat(userId) {
+        selectedExpertUserId = userId;
+
+        const fromList = expertRows.find((row) => row.user_id === userId) || {};
+        selectedExpertData = {
+          ...fromList,
+          unread_count: 0,
+        };
+        renderExpertList();
+        renderSelectedExpertHeader();
+
+        const res = await apiFetch(
+          `/superadmin/expert-chats/${userId}/thread`,
+          {
+            method: "POST",
+          },
+        );
+        if (!res?.ok) {
+          toast("Unable to open this expert chat.", "error");
+          return;
+        }
+
+        const payload = await res.json();
+        selectedExpertThreadId = payload.thread_id || null;
+
+        selectedExpertData = {
+          ...fromList,
+          ...(payload.expert || {}),
+          thread_id: payload.thread_id || fromList.thread_id || null,
+          unread_count: 0,
+        };
+
+        expertRows = expertRows.map((row) =>
+          row.user_id === userId ? { ...row, ...selectedExpertData } : row,
+        );
+        chatStores.expert.rows = expertRows;
+        renderExpertList();
+        renderSelectedExpertHeader();
+
+        if (!selectedExpertThreadId) return;
+        await ensureSuperAdminUserId();
+        destroyChat();
+        initStudentChat(
+          selectedExpertThreadId,
+          superAdminUserId,
+          "sae-chat-messages",
+        );
+        attachSuperAdminChatNotificationListener();
+      }
+
+      function handleExpertSearchInput() {
+        clearTimeout(expertSearchTimeout);
+        expertSearchTimeout = setTimeout(async () => {
+          const query =
+            document.getElementById("expert-chat-search")?.value.trim() || "";
+          await loadExpertList(query, true, false);
+        }, 250);
+      }
+
+      function sendExpertChatMessage() {
+        const input = document.getElementById("sae-chat-input");
+        const body = input?.value?.trim() || "";
+        if (!body || !selectedExpertThreadId) return;
+
+        sendMessage(body, selectedExpertThreadId);
+
+        const row = expertRows.find(
+          (item) => item.user_id === selectedExpertUserId,
+        );
+        if (row) {
+          row.last_message_preview = body;
+          row.last_message_at = new Date().toISOString();
+          row.unread_count = 0;
+          expertRows.sort((a, b) =>
+            (b.last_message_at || "").localeCompare(a.last_message_at || ""),
+          );
+          renderExpertList();
+        }
+
+        input.value = "";
+        input.focus();
+      }
+
+      async function toggleSelectedExpertBan(btn) {
+        if (!selectedExpertUserId || !selectedExpertData) return;
+        const nextBanState = !selectedExpertData.is_banned;
+        confirmToggleBan(
+          selectedExpertUserId,
+          nextBanState,
+          btn,
+          true,
+          selectedExpertData.name || "this expert",
+        );
+      }
+
+      function renderEmployeeChatWorkspace() {
+        const list = document.getElementById("users-list");
+        list.innerHTML = `
+          <div class="expert-chat-shell">
+            <aside class="expert-chat-sidebar">
+              <div class="expert-chat-search-wrap">
+                <input
+                  id="employee-chat-search"
+                  type="search"
+                  class="input"
+                  placeholder="Search employee admins by name or email"
+                  oninput="handleEmployeeSearchInput()"
+                />
+              </div>
+              <div id="employee-chat-list" class="expert-chat-list"></div>
+            </aside>
+            <section id="employee-chat-main" class="expert-chat-main">
+              <div class="expert-chat-empty">Select an employee admin to open chat.</div>
+            </section>
+          </div>
+        `;
+      }
+
+      function renderEmployeeList() {
+        const listEl = document.getElementById("employee-chat-list");
+        if (!listEl) return;
+
+        if (!employeeRows.length) {
+          listEl.innerHTML = `<div class="empty-state" style="padding:40px 16px"><p>No employee admins found.</p></div>`;
+          return;
+        }
+
+        listEl.innerHTML = employeeRows
+          .map((row) => {
+            const isActive = row.user_id === selectedEmployeeUserId;
+            const unreadCount = Number(row.unread_count) || 0;
+            const preview = row.last_message_preview || "No messages yet.";
+            const status = row.is_banned ? "Banned" : "Active";
+            const senior = row.is_senior ? "Senior" : "Support";
+            return `
+              <div
+                class="expert-chat-list-item ${isActive ? "active" : ""} ${unreadCount > 0 ? "unread" : ""}"
+                onclick="openEmployeeChat('${row.user_id}')"
+              >
+                <div class="expert-chat-list-title-row">
+                  <div class="expert-chat-list-title">${escapeHtml(row.name)}</div>
+                  ${
+                    unreadCount > 0
+                      ? `<span class="expert-chat-unread-pill">${formatUnreadCount(unreadCount)}</span>`
+                      : ""
+                  }
+                </div>
+                <div class="expert-chat-list-sub">${escapeHtml(row.email)} · ${escapeHtml(senior)}</div>
+                <div class="expert-chat-list-preview">${escapeHtml(status)} · ${escapeHtml(preview)}</div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      async function loadEmployeeList(
+        query = "",
+        preserveSelection = true,
+        refreshActiveView = false,
+      ) {
+        const cachedRows =
+          chatStores.employee.loaded && chatStores.employee.query === query
+            ? chatStores.employee.rows
+            : null;
+
+        if (cachedRows) {
+          employeeRows = cachedRows;
+          renderEmployeeList();
+          if (!refreshActiveView) return;
+        }
+
+        const listEl = document.getElementById("employee-chat-list");
+        if (!cachedRows && listEl) {
+          listEl.innerHTML = `<div class="empty-state" style="padding:40px 16px"><p>Loading employee admins...</p></div>`;
+        }
+
+        if (cachedRows && !refreshActiveView) return;
+        if (chatStores.employee.loading) return;
+
+        chatStores.employee.loading = true;
+        const qs = query ? `?q=${encodeURIComponent(query)}` : "";
+        const res = await apiFetch(`/superadmin/employee-chats${qs}`);
+        chatStores.employee.loading = false;
+
+        if (!res?.ok) {
+          if (listEl) {
+            listEl.innerHTML = `<div class="empty-state" style="padding:40px 16px"><p>Failed to load employee chats.</p></div>`;
+          }
+          toast("Could not load employee chats.", "error");
+          return;
+        }
+
+        employeeRows = await res.json();
+        chatStores.employee.rows = employeeRows;
+        chatStores.employee.query = query;
+        chatStores.employee.loaded = true;
+        renderEmployeeList();
+
+        if (!employeeRows.length) {
+          selectedEmployeeUserId = null;
+          selectedEmployeeThreadId = null;
+          selectedEmployeeData = null;
+          destroyChat();
+          const main = document.getElementById("employee-chat-main");
+          if (main) {
+            main.innerHTML = `<div class="expert-chat-empty">No employee admins match this search.</div>`;
+          }
+          return;
+        }
+
+        const hasSelected = employeeRows.some(
+          (row) => row.user_id === selectedEmployeeUserId,
+        );
+
+        if (preserveSelection && hasSelected && selectedEmployeeThreadId) {
+          if (!refreshActiveView) return;
+          const fresh = employeeRows.find(
+            (row) => row.user_id === selectedEmployeeUserId,
+          );
+          if (fresh) {
+            selectedEmployeeData = {
+              ...(selectedEmployeeData || {}),
+              ...fresh,
+            };
+            renderSelectedEmployeeHeader();
+            await ensureSuperAdminUserId();
+            destroyChat();
+            initStudentChat(
+              selectedEmployeeThreadId,
+              superAdminUserId,
+              "saemp-chat-messages",
+            );
+            attachSuperAdminChatNotificationListener();
+          }
+          return;
+        }
+
+        if (!preserveSelection && employeeRows[0]) {
+          await openEmployeeChat(employeeRows[0].user_id);
+        }
+      }
+
+      function renderSelectedEmployeeHeader() {
+        const main = document.getElementById("employee-chat-main");
+        if (!main || !selectedEmployeeData) return;
+
+        const statusText = selectedEmployeeData.is_banned ? "Banned" : "Active";
+        const statusClass = selectedEmployeeData.is_banned ? "danger" : "ok";
+        const banAction = selectedEmployeeData.is_banned ? "Unban" : "Ban";
+        const seniorText = selectedEmployeeData.is_senior
+          ? "Senior Admin"
+          : "Support Admin";
+
+        main.innerHTML = `
+          <div class="expert-chat-header">
+            <div>
+              <h3>${escapeHtml(selectedEmployeeData.name || "Employee Admin")}</h3>
+              <div class="expert-chat-header-sub">${escapeHtml(selectedEmployeeData.email || "")}</div>
+              <div class="expert-chat-meta-row">
+                <span class="expert-chat-meta-chip">Joined ${formatDate(selectedEmployeeData.joined_at)}</span>
+                <span class="expert-chat-meta-chip ${statusClass}">${statusText}</span>
+                <span class="expert-chat-meta-chip">${escapeHtml(seniorText)}</span>
+              </div>
+            </div>
+            <div class="expert-chat-actions">
+              <span id="chat-status" class="expert-chat-header-sub"></span>
+              <button class="btn btn-secondary btn-sm" onclick="toggleSelectedEmployeeBan(this)">
+                ${banAction} Employee
+              </button>
+            </div>
+          </div>
+          <div class="expert-chat-thread">
+            <div id="saemp-chat-messages" class="chat-messages">
+              <p style="color:var(--color-gray-400);text-align:center;font-size:14px;margin-top:20px;">Fetching chat...</p>
+            </div>
+            <div class="expert-chat-composer">
+              <input
+                id="saemp-chat-input"
+                type="text"
+                class="input"
+                placeholder="Type a message..."
+                maxlength="1500"
+              />
+              <button id="saemp-chat-send-btn" class="btn btn-primary btn-sm" onclick="sendEmployeeChatMessage()">Send</button>
+            </div>
+          </div>
+        `;
+
+        const input = document.getElementById("saemp-chat-input");
+        input?.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            sendEmployeeChatMessage();
+          }
+        });
+      }
+
+      async function openEmployeeChat(userId) {
+        selectedEmployeeUserId = userId;
+
+        const fromList =
+          employeeRows.find((row) => row.user_id === userId) || {};
+        selectedEmployeeData = {
+          ...fromList,
+          unread_count: 0,
+        };
+        renderEmployeeList();
+        renderSelectedEmployeeHeader();
+
+        const res = await apiFetch(
+          `/superadmin/employee-chats/${userId}/thread`,
+          {
+            method: "POST",
+          },
+        );
+        if (!res?.ok) {
+          toast("Unable to open this employee chat.", "error");
+          return;
+        }
+
+        const payload = await res.json();
+        selectedEmployeeThreadId = payload.thread_id || null;
+
+        selectedEmployeeData = {
+          ...fromList,
+          ...(payload.employee || {}),
+          thread_id: payload.thread_id || fromList.thread_id || null,
+          unread_count: 0,
+        };
+
+        employeeRows = employeeRows.map((row) =>
+          row.user_id === userId ? { ...row, ...selectedEmployeeData } : row,
+        );
+        chatStores.employee.rows = employeeRows;
+        renderEmployeeList();
+        renderSelectedEmployeeHeader();
+
+        if (!selectedEmployeeThreadId) return;
+        await ensureSuperAdminUserId();
+        destroyChat();
+        initStudentChat(
+          selectedEmployeeThreadId,
+          superAdminUserId,
+          "saemp-chat-messages",
+        );
+        attachSuperAdminChatNotificationListener();
+      }
+
+      function handleEmployeeSearchInput() {
+        clearTimeout(employeeSearchTimeout);
+        employeeSearchTimeout = setTimeout(async () => {
+          const query =
+            document.getElementById("employee-chat-search")?.value.trim() || "";
+          await loadEmployeeList(query, true, false);
+        }, 250);
+      }
+
+      function sendEmployeeChatMessage() {
+        const input = document.getElementById("saemp-chat-input");
+        const body = input?.value?.trim() || "";
+        if (!body || !selectedEmployeeThreadId) return;
+
+        sendMessage(body, selectedEmployeeThreadId);
+
+        const row = employeeRows.find(
+          (item) => item.user_id === selectedEmployeeUserId,
+        );
+        if (row) {
+          row.last_message_preview = body;
+          row.last_message_at = new Date().toISOString();
+          row.unread_count = 0;
+          employeeRows.sort((a, b) =>
+            (b.last_message_at || "").localeCompare(a.last_message_at || ""),
+          );
+          renderEmployeeList();
+        }
+
+        input.value = "";
+        input.focus();
+      }
+
+      async function toggleSelectedEmployeeBan(btn) {
+        if (!selectedEmployeeUserId || !selectedEmployeeData) return;
+        const nextBanState = !selectedEmployeeData.is_banned;
+        confirmToggleBan(
+          selectedEmployeeUserId,
+          nextBanState,
+          btn,
+          false,
+          selectedEmployeeData.name || "this employee",
+        );
+      }
+
+      function confirmToggleBan(
+        userId,
+        ban,
+        btn,
+        isExpertAction = false,
+        userName = "",
+      ) {
+        pendingBanAction = { userId, ban, btn, isExpertAction, userName };
+        const modal = document.getElementById("ban-confirm-modal");
+        const title = document.getElementById("ban-confirm-title");
+        const message = document.getElementById("ban-confirm-message");
+        const cta = document.getElementById("ban-confirm-btn");
+
+        const verb = ban ? "ban" : "unban";
+        const name = userName || "this user";
+        title.textContent = `${ban ? "Ban" : "Unban"} confirmation`;
+        message.textContent = `Are you sure you want to ${verb} ${name}?`;
+        cta.textContent = ban ? "Yes, Ban" : "Yes, Unban";
+        modal.classList.add("active");
+      }
+
+      function closeBanConfirmModal() {
+        document
+          .getElementById("ban-confirm-modal")
+          ?.classList.remove("active");
+        pendingBanAction = null;
+      }
+
+      function handleBanModalBackdrop(event) {
+        if (event.target?.id === "ban-confirm-modal") {
+          closeBanConfirmModal();
+        }
+      }
+
+      async function confirmToggleBanAction() {
+        if (!pendingBanAction) return;
+        const action = pendingBanAction;
+        closeBanConfirmModal();
+        await toggleBan(
+          action.userId,
+          action.ban,
+          action.btn,
+          action.isExpertAction,
+        );
+      }
+
+      function roleBadge(role) {
+        return (
+          {
+            student: "progress",
+            expert: "reviewing",
+            employee: "pending",
+            super_admin: "completed",
+          }[role] || "awaiting"
+        );
+      }
+
+      async function toggleBan(userId, ban, btn, isExpertAction = false) {
+        if (btn) btn.disabled = true;
+        const endpoint = ban
+          ? `/superadmin/users/${userId}/ban`
+          : `/superadmin/users/${userId}/unban`;
+
+        const res = await apiFetch(endpoint, { method: "POST" });
+        if (res?.ok) {
+          toast(
+            `User ${ban ? "banned" : "unbanned"}.`,
+            ban ? "warning" : "success",
+          );
+          if (currentRoleFilter === "expert" || isExpertAction) {
+            const query =
+              document.getElementById("expert-chat-search")?.value.trim() || "";
+            await loadExpertList(query, true, true);
+          } else if (currentRoleFilter === "employee") {
+            const query =
+              document.getElementById("employee-chat-search")?.value.trim() ||
+              "";
+            await loadEmployeeList(query, true, true);
+          } else {
+            await loadUsers(currentRoleFilter);
+          }
+        } else {
+          toast("Action failed.", "error");
+        }
+        if (btn) btn.disabled = false;
+      }
+
+      async function deleteUser(userId, role, btn) {
+        if (
+          !confirm(
+            `Permanently delete this ${role} account? This cannot be undone.`,
+          )
+        )
+          return;
+
+        btn.disabled = true;
+        const res = await apiFetch(`/superadmin/users/${userId}`, {
+          method: "DELETE",
+        });
+        if (res?.ok) {
+          toast("User deleted.");
+          await loadUsers(currentRoleFilter);
+        } else {
+          btn.disabled = false;
+          toast("Delete failed.", "error");
+        }
+      }
+
+      function showCreateEmployee() {
+        document
+          .getElementById("create-employee-modal")
+          .classList.add("active");
+      }
+
+      function closeModal() {
+        document
+          .getElementById("create-employee-modal")
+          .classList.remove("active");
+        document.getElementById("emp-name").value = "";
+        document.getElementById("emp-email").value = "";
+        document.getElementById("emp-password").value = "";
+      }
+
+      async function createEmployee() {
+        const name = document.getElementById("emp-name").value.trim();
+        const email = document.getElementById("emp-email").value.trim();
+        const password = document.getElementById("emp-password").value;
+
+        if (!name || !email || !password) {
+          toast("All fields are required.", "error");
+          return;
+        }
+
+        const res = await apiFetch("/superadmin/employees/create", {
+          method: "POST",
+          body: JSON.stringify({ name, email, password }),
+        });
+
+        if (res?.ok) {
+          closeModal();
+          toast("Employee account created successfully.");
+          await loadUsers("employee");
+        } else {
+          const d = await res.json();
+          toast(d.error || "Creation failed.", "error");
+        }
+      }
+
+      ensureSuperAdminUserId()
+        .then(() => loadUsers(launchRole))
+        .catch(() => {
+          toast("Unable to load account details.", "error");
+          loadUsers(launchRole);
+        });
+    </script>
+    <script src="/js/notifications.js"></script>
+  </body>
+</html>

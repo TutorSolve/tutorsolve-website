@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 500" role="img" aria-labelledby="title desc">
+  <title id="title">TutorSolve expert illustration</title>
+  <desc id="desc">A tutor helping students online with charts and lesson cards.</desc>
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#eef2ff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    <linearGradient id="primary" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4e4ae5" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+    <linearGradient id="soft" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="500" rx="42" fill="url(#panel)" />
+  <circle cx="560" cy="92" r="58" fill="#dbeafe" />
+  <circle cx="102" cy="410" r="70" fill="#ede9fe" />
+
+  <rect x="114" y="92" width="412" height="262" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3" />
+  <rect x="144" y="124" width="352" height="198" rx="18" fill="url(#soft)" />
+
+  <rect x="166" y="148" width="170" height="16" rx="8" fill="#c7d2fe" />
+  <rect x="166" y="176" width="232" height="12" rx="6" fill="#e2e8f0" />
+  <rect x="166" y="200" width="140" height="12" rx="6" fill="#e2e8f0" />
+
+  <rect x="166" y="238" width="36" height="68" rx="10" fill="#818cf8" />
+  <rect x="214" y="222" width="36" height="84" rx="10" fill="#6366f1" />
+  <rect x="262" y="252" width="36" height="54" rx="10" fill="#4f46e5" />
+  <rect x="310" y="206" width="36" height="100" rx="10" fill="#3730a3" />
+
+  <circle cx="426" cy="233" r="44" fill="#f8fafc" stroke="#cbd5e1" stroke-width="3" />
+  <circle cx="426" cy="220" r="22" fill="#fcd5b5" />
+  <path d="M386 288c9-26 30-40 40-40s31 14 40 40" fill="url(#primary)" />
+
+  <rect x="80" y="312" width="126" height="84" rx="16" fill="#ffffff" stroke="#dbeafe" stroke-width="3" />
+  <rect x="98" y="332" width="72" height="10" rx="5" fill="#bfdbfe" />
+  <rect x="98" y="350" width="90" height="10" rx="5" fill="#e2e8f0" />
+  <rect x="98" y="368" width="58" height="10" rx="5" fill="#e2e8f0" />
+
+  <rect x="444" y="344" width="146" height="92" rx="16" fill="#ffffff" stroke="#ddd6fe" stroke-width="3" />
+  <rect x="462" y="364" width="84" height="10" rx="5" fill="#c4b5fd" />
+  <rect x="462" y="382" width="110" height="10" rx="5" fill="#e2e8f0" />
+  <rect x="462" y="400" width="72" height="10" rx="5" fill="#e2e8f0" />
+
+  <circle cx="132" cy="76" r="12" fill="#4e4ae5" />
+  <circle cx="520" cy="418" r="10" fill="#8b5cf6" />
+</svg>

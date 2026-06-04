@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Super Admin Chat — TutorSolve Expert</title>
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/expert.css" />
+  </head>
+
+  <body>
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <a href="/index.html" class="sidebar-logo">
+          <img src="/assets/logo.svg" alt="TutorSolve" width="28" />
+          <span class="navbar-logo-text">TutorSolve</span>
+        </a>
+
+        <nav class="sidebar-nav">
+          <p class="sidebar-section-label">Menu</p>
+          <a
+            href="/expert/dashboard.html"
+            class="sidebar-item"
+            data-page="dashboard"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <rect x="1" y="1" width="6" height="6" rx="1" />
+              <rect x="9" y="1" width="6" height="6" rx="1" />
+              <rect x="1" y="9" width="6" height="6" rx="1" />
+              <rect x="9" y="9" width="6" height="6" rx="1" />
+            </svg>
+            Dashboard
+          </a>
+          <a
+            href="/expert/job-board.html"
+            class="sidebar-item"
+            data-page="job-board"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M2 4h12M2 8h8M2 12h10" />
+            </svg>
+            Job Board
+          </a>
+          <a
+            href="/expert/my-tasks.html"
+            class="sidebar-item"
+            data-page="my-tasks"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M4 4h8M4 8h5M3 12l2 2 4-4" />
+            </svg>
+            My Tasks
+          </a>
+          <a
+            href="/expert/super-admin-chat.html"
+            class="sidebar-item"
+            data-page="super-admin-chat"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M2.5 3.5h11v7h-3.2L7.2 13.5v-3H2.5v-7z" />
+            </svg>
+            Super Admin Chat
+            <span id="sa-chat-unread-badge" class="sa-chat-unread-badge"
+              >0</span
+            >
+          </a>
+          <a
+            href="/expert/profile.html"
+            class="sidebar-item"
+            data-page="profile"
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <circle cx="8" cy="5" r="3" />
+              <path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" />
+            </svg>
+            Profile
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button
+            onclick="logout()"
+            class="sidebar-item"
+            style="
+              width: 100%;
+              border: none;
+              background: none;
+              cursor: pointer;
+              text-align: left;
+            "
+          >
+            <svg
+              class="sidebar-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path
+                d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6"
+              />
+            </svg>
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      <main class="dashboard-main expert-chat-main">
+        <div class="expert-chat-main-inner">
+          <div class="page-header" style="margin-bottom: 0">
+            <div>
+              <h1 class="page-title">Super Admin Chat</h1>
+              <p class="page-subtitle">
+                Direct channel for escalations, policy clarifications, and
+                priority blockers.
+              </p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="markRead(true)">
+              Mark as Read
+            </button>
+          </div>
+
+          <section class="sa-chat-shell">
+            <header class="sa-chat-header">
+              <div>
+                <h2 id="sa-chat-title" class="sa-chat-title">Connecting...</h2>
+                <p id="sa-chat-subtitle" class="sa-chat-subtitle">
+                  Preparing your conversation channel.
+                </p>
+              </div>
+              <div
+                style="display: flex; align-items: center; gap: var(--space-3)"
+              >
+                <span class="sa-chat-pill">Priority Line</span>
+                <span id="chat-status" class="sa-chat-subtitle"></span>
+              </div>
+            </header>
+
+            <div class="sa-chat-thread">
+              <div id="sa-chat-messages" class="chat-messages">
+                <p
+                  style="
+                    color: var(--color-gray-400);
+                    text-align: center;
+                    font-size: 14px;
+                    margin-top: 20px;
+                  "
+                >
+                  Fetching chat...
+                </p>
+              </div>
+
+              <div class="sa-chat-input-row">
+                <input
+                  id="sa-chat-input"
+                  type="text"
+                  class="input"
+                  placeholder="Type your message to Super Admin..."
+                  maxlength="1500"
+                />
+                <button
+                  id="sa-chat-send-btn"
+                  class="btn btn-primary btn-sm"
+                  onclick="sendSuperAdminMessage()"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="/js/runtime-env.js"></script>
+    <script src="/js/runtime-config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/chat.js"></script>
+    <script>
+      if (!requireRole("expert")) throw new Error("Abort");
+      document
+        .querySelector('[data-page="super-admin-chat"]')
+        ?.classList.add("active");
+
+      let currentUserId = null;
+      let threadId = null;
+      let markReadInterval = null;
+      let lastReadMarkMs = 0;
+      let liveReadHandler = null;
+      let rebindReadHandler = null;
+
+      function clearSidebarChatBadge() {
+        const badge = document.getElementById("sa-chat-unread-badge");
+        if (!badge) return;
+        badge.textContent = "0";
+        badge.classList.remove("show");
+      }
+
+      async function markRead(force = false) {
+        if (!threadId) return;
+        const nowMs = Date.now();
+        if (!force && nowMs - lastReadMarkMs < 1500) return;
+
+        lastReadMarkMs = nowMs;
+        try {
+          await apiFetch("/expert/super-admin-chat/read", { method: "POST" });
+          clearSidebarChatBadge();
+        } catch (_err) {
+          // Best effort
+        }
+      }
+
+      function renderChatHeader(data) {
+        const name = data?.super_admin?.name || "Super Admin";
+        const email = data?.super_admin?.email || "";
+
+        document.getElementById("sa-chat-title").textContent =
+          `Chat with ${name}`;
+        document.getElementById("sa-chat-subtitle").textContent = email;
+      }
+
+      function sendSuperAdminMessage() {
+        const input = document.getElementById("sa-chat-input");
+        const body = (input?.value || "").trim();
+        if (!threadId || !body) return;
+
+        sendMessage(body, threadId);
+        input.value = "";
+        input.focus();
+        markRead(true);
+      }
+
+      function attachLiveReadTracker() {
+        if (typeof getChatSocket !== "function") return;
+        const sock = getChatSocket();
+        if (!sock) {
+          setTimeout(attachLiveReadTracker, 250);
+          return;
+        }
+
+        if (!liveReadHandler) {
+          liveReadHandler = (msg) => {
+            if (!msg || msg.thread_id !== threadId) return;
+            if (msg.sender_user_id === currentUserId) return;
+            if (document.visibilityState === "visible") {
+              markRead(false);
+            }
+          };
+        }
+
+        if (!rebindReadHandler) {
+          rebindReadHandler = () => {
+            sock.off("new_message", liveReadHandler);
+            sock.on("new_message", liveReadHandler);
+          };
+        }
+
+        rebindReadHandler();
+        sock.off("connect", rebindReadHandler);
+        sock.on("connect", rebindReadHandler);
+      }
+
+      async function initializeChat() {
+        try {
+          const [meRes, threadRes] = await Promise.all([
+            apiFetch("/auth/me"),
+            apiFetch("/expert/super-admin-chat/thread"),
+          ]);
+
+          if (!meRes?.ok) {
+            throw new Error("Could not resolve your account details.");
+          }
+          if (!threadRes?.ok) {
+            let errorMessage = "Could not initialize chat.";
+            try {
+              const errPayload = await threadRes.json();
+              if (errPayload?.error) errorMessage = errPayload.error;
+            } catch (_err) {}
+            throw new Error(errorMessage);
+          }
+
+          const me = await meRes.json();
+          const threadData = await threadRes.json();
+          currentUserId = me.id;
+          threadId = threadData.thread_id;
+
+          renderChatHeader(threadData);
+
+          if (!threadId) {
+            document.getElementById("sa-chat-messages").innerHTML =
+              `<div class="sa-chat-empty">Unable to open the chat thread right now.</div>`;
+            return;
+          }
+
+          initExpertChat(threadId, currentUserId, "sa-chat-messages");
+          attachLiveReadTracker();
+          await markRead(true);
+
+          if (markReadInterval) clearInterval(markReadInterval);
+          markReadInterval = setInterval(() => {
+            if (document.visibilityState === "visible") {
+              markRead(false);
+            }
+          }, 10000);
+        } catch (err) {
+          toast(err.message || "Failed to load chat.", "error");
+          document.getElementById("sa-chat-messages").innerHTML =
+            `<div class="sa-chat-empty">Could not load this chat. Please refresh and try again.</div>`;
+        }
+      }
+
+      document
+        .getElementById("sa-chat-input")
+        ?.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendSuperAdminMessage();
+          }
+        });
+
+      window.addEventListener("focus", () => markRead(true));
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          markRead(true);
+        }
+      });
+
+      window.addEventListener("beforeunload", () => {
+        if (markReadInterval) clearInterval(markReadInterval);
+        destroyChat();
+      });
+
+      initializeChat();
+    </script>
+    <script src="/js/notifications.js"></script>
+    <script src="/js/expert-super-admin-chat-badge.js"></script>
+  </body>
+</html>
