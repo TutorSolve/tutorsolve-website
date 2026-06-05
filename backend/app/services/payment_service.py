@@ -58,14 +58,20 @@ def create_advance_session(question_id, student_price, question_title, student_e
     return session.url, session.id
 
 
-def create_completion_session(question_id, student_price, question_title, student_email):
+def create_completion_session(question_id, student_price, question_title, student_email, completion_amount=None):
     """
     Creates a Stripe Checkout Session for the completion payment.
     Returns the session URL to redirect the student to.
     """
     s = _stripe()
-    _, completion = get_split_amounts(student_price)
+    _, split_completion = get_split_amounts(student_price)
+    completion = float(completion_amount) if completion_amount is not None else split_completion
     frontend      = current_app.config["FRONTEND_URL"]
+    description = (
+        "Full payment to unlock your solution file."
+        if completion_amount is not None and completion == float(student_price)
+        else "Final payment to unlock your full solution file."
+    )
 
     session = s.checkout.Session.create(
         mode="payment",
@@ -78,7 +84,7 @@ def create_completion_session(question_id, student_price, question_title, studen
                 "unit_amount":  int(completion * 100),
                 "product_data": {
                     "name":        f"Completion Payment — {question_title}",
-                    "description": "Final payment to unlock your full solution file."
+                    "description": description
                 }
             },
             "quantity": 1
@@ -133,6 +139,10 @@ def ensure_payment_record(question_id_str, student_price, student_id_oid):
     else:
         # Only update if no payment has been processed
         if not existing.get("advance_paid") and not existing.get("completion_paid"):
+            if existing.get("advance_bypassed"):
+                advance = 0
+                completion = student_price
+
             db.payments.update_one(
                 {"_id": existing["_id"]},
                 {"$set": {

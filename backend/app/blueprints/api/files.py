@@ -184,8 +184,12 @@ def get_file_url(file_id):
         return jsonify({"error": "File content not found"}), 404
 
     import mimetypes
-    filename = file.get("original_filename", "file")
-    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    if is_locked:
+        filename = os.path.basename(key) or file.get("original_filename", "file")
+        content_type = mimetypes.guess_type(key)[0] or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    else:
+        filename = file.get("original_filename", "file")
+        content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
     url = get_signed_url(key, filename=filename, content_type=content_type)
     return jsonify({"url": url, "locked": is_locked}), 200

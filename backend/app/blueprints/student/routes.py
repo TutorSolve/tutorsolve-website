@@ -55,7 +55,13 @@ def dashboard_charts():
             "as": "payment"
         }},
         {"$unwind": {"path": "$payment", "preserveNullAndEmptyArrays": True}},
-        {"$match": {"payment.advance_paid": True, "created_at": {"$gte": six_months_ago}}},
+        {"$match": {
+            "$or": [
+                {"payment.advance_paid": True},
+                {"payment.completion_paid": True}
+            ],
+            "created_at": {"$gte": six_months_ago}
+        }},
         {"$project": {
             "month": {"$month": "$created_at"},
             "year": {"$year": "$created_at"},
@@ -287,9 +293,12 @@ def order_detail(question_id):
     if payment:
         question["payment"] = {
             "advance_paid":    payment.get("advance_paid", False),
+            "advance_bypassed": payment.get("advance_bypassed", False),
             "completion_paid": payment.get("completion_paid", False),
             "advance_amount":  payment.get("advance_amount"),
             "completion_amount": payment.get("completion_amount"),
+            "total_amount":    payment.get("total_amount"),
+            "status":          payment.get("status"),
         }
     else:
         question["payment"] = None
@@ -355,7 +364,7 @@ def get_thread(question_id):
 def request_refund(question_id):
     """
     Student requests a refund after paying advance or completion.
-    - Allowed when advance_paid=True, regardless of completion status.
+    - Allowed once any payment has been made.
     - This is advisory only — no status change on the payment record.
     - Posts an automated message to Thread A so the admin sees it immediately.
     - Notifies the assigned employee.
@@ -375,8 +384,8 @@ def request_refund(question_id):
     if not payment:
         return jsonify({"error": "No payment record found for this order"}), 400
 
-    if not payment.get("advance_paid"):
-        return jsonify({"error": "No advance payment has been made yet"}), 400
+    if not payment.get("advance_paid") and not payment.get("completion_paid"):
+        return jsonify({"error": "No payment has been made yet"}), 400
 
     if payment.get("status") == "refund_requested":
         return jsonify({"error": "A refund request is already pending"}), 409

@@ -739,6 +739,7 @@ def order_detail(question_id):
         "thread_b_id":      str(thread_b["_id"]) if thread_b else None,
         "payment":          {
             "advance_paid":    payment.get("advance_paid", False),
+            "advance_bypassed": payment.get("advance_bypassed", False),
             "completion_paid": payment.get("completion_paid", False),
             "advance_amount":  payment.get("advance_amount"),
             "completion_amount": payment.get("completion_amount"),
@@ -859,8 +860,10 @@ def refund_flow_detail(question_id):
             "completion_amount": payment.get("completion_amount"),
             "total_amount": payment.get("total_amount"),
             "advance_paid": bool(payment.get("advance_paid")),
+            "advance_bypassed": bool(payment.get("advance_bypassed")),
             "completion_paid": bool(payment.get("completion_paid")),
             "advance_paid_at": str(payment.get("advance_paid_at")) if payment.get("advance_paid_at") else None,
+            "advance_bypassed_at": str(payment.get("advance_bypassed_at")) if payment.get("advance_bypassed_at") else None,
             "completion_paid_at": str(payment.get("completion_paid_at")) if payment.get("completion_paid_at") else None,
             "refund_requested_at": str(payment.get("refund_requested_at")) if payment.get("refund_requested_at") else None,
             "refund_type": payment.get("refund_type"),
@@ -885,6 +888,13 @@ def refund_flow_detail(question_id):
             "title": "Advance Payment Completed",
             "at": payment_payload.get("advance_paid_at"),
             "detail": f"₹{payment_payload.get('advance_amount', 0)} paid",
+            "state": "done"
+        })
+    elif payment_payload and payment_payload.get("advance_bypassed"):
+        timeline.append({
+            "title": "Advance Payment Bypassed",
+            "at": payment_payload.get("advance_bypassed_at"),
+            "detail": "Student will pay the full amount after completion.",
             "state": "done"
         })
     else:
@@ -959,6 +969,118 @@ def get_quote(question_id):
         "student_price":  question.get("student_price"),
         "expert_payout":  question.get("expert_payout"),
         "price_approved": question.get("price_approved", False),
+    }), 200
+
+
+@admin_bp.route("/orders/<question_id>/bypass-advance", methods=["POST"])
+@admin_required
+def bypass_advance_payment(question_id):
+    """
+    Lets the assigned employee admin move an order forward without collecting
+    the 50% advance. The student will owe the full amount at completion.
+    """
+    uid = get_jwt_identity()
+    db = get_db()
+    now = datetime.utcnow()
+
+    question = db.questions.find_one({"_id": oid(question_id)})
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+
+    employee = db.employees.find_one({"user_id": oid(uid)})
+    if not employee or str(question.get("assigned_employee_id")) != str(employee["_id"]):
+        return jsonify({"error": "Access denied. You are not assigned to this order."}), 403
+
+    if not question.get("price_approved") or not question.get("student_price"):
+        return jsonify({"error": "Set and approve the student price before bypassing advance payment."}), 400
+
+    payment = db.payments.find_one({"question_id": oid(question_id)})
+    if not payment:
+        from app.services.payment_service import ensure_payment_record
+        ensure_payment_record(question_id, question["student_price"], question["student_id"])
+        payment = db.payments.find_one({"question_id": oid(question_id)})
+
+    if not payment:
+        return jsonify({"error": "Unable to create payment record for this order."}), 500
+
+    if payment.get("advance_paid"):
+        return jsonify({"error": "Advance payment has already been paid."}), 400
+
+    if payment.get("completion_paid"):
+        return jsonify({"error": "Completion payment has already been paid."}), 400
+
+    total_amount = float(question.get("student_price") or payment.get("total_amount") or 0)
+    if total_amount <= 0:
+        return jsonify({"error": "Student price must be greater than zero."}), 400
+
+    db.payments.update_one(
+        {"question_id": oid(question_id)},
+        {"$set": {
+            "advance_bypassed": True,
+            "advance_bypassed_at": now,
+            "advance_bypassed_by": employee["_id"],
+            "advance_amount": 0,
+            "completion_amount": total_amount,
+            "total_amount": total_amount,
+            "status": "advance_bypassed",
+        }}
+    )
+
+    db.questions.update_one(
+        {"_id": oid(question_id)},
+        {"$set": {"status": "in_progress"}}
+    )
+
+    thread_a = db.threads.find_one({
+        "question_id": oid(question_id),
+        "thread_type": "A"
+    })
+    if thread_a:
+        body = (
+            "ℹ️ Advance payment has been bypassed for this order. "
+            f"You can pay the full amount of ₹{total_amount:.2f} after the solution preview is ready."
+        )
+        msg_result = db.messages.insert_one({
+            "thread_id": thread_a["_id"],
+            "sender_user_id": employee["user_id"],
+            "body": body,
+            "is_system": True,
+            "created_at": now
+        })
+        try:
+            from app.extensions import socketio
+            payload = {
+                "_id": str(msg_result.inserted_id),
+                "thread_id": str(thread_a["_id"]),
+                "sender_user_id": str(employee["user_id"]),
+                "body": body,
+                "is_system": True,
+                "created_at": now.isoformat()
+            }
+            socketio.start_background_task(
+                lambda: socketio.emit("new_message", payload, room=f"thread_{thread_a['_id']}")
+            )
+        except Exception:
+            pass
+
+    student = db.students.find_one({"_id": question["student_id"]})
+    if student:
+        try:
+            from app.tasks.notification_tasks import send_notification_async
+            send_notification_async.delay(
+                user_id=str(student["user_id"]),
+                notif_type="advance_payment_bypassed",
+                title="Advance payment deferred",
+                body=f"Work can begin on '{question['title']}'. You will pay the full amount after completion.",
+                link=f"/student/order-detail.html?id={question_id}"
+            )
+        except Exception:
+            pass
+
+    return jsonify({
+        "status": "advance_bypassed",
+        "completion_amount": total_amount,
+        "total_amount": total_amount
     }), 200
 
 
@@ -1232,8 +1354,8 @@ def initiate_refund(question_id):
     if not payment:
         return jsonify({"error": "No payment record for this order"}), 400
 
-    if not payment.get("advance_paid"):
-        return jsonify({"error": "No advance payment made — nothing to refund"}), 400
+    if not payment.get("advance_paid") and not payment.get("completion_paid"):
+        return jsonify({"error": "No payment made — nothing to refund"}), 400
 
     # BUG#9: Check for race conditions
     if payment.get("status") == "refunded":
@@ -1257,7 +1379,10 @@ def initiate_refund(question_id):
             )
         )
         pool_label = "total paid amount"
-        if refund_amount > float(payment.get("completion_amount", 0) or 0):
+        if (
+            payment.get("advance_paid")
+            and refund_amount > float(payment.get("completion_amount", 0) or 0)
+        ):
             refund_type = "full"
     else:
         max_refundable = payment.get("advance_amount", 0)
@@ -1532,12 +1657,16 @@ def dashboard_charts():
     }
 
     attention_needed = []
-    # a. Unassigned (advance paid, no expert)
-    # Get questions with advance_paid=True from payments
-    advance_paid_qids = [p["question_id"] for p in db.payments.find({"advance_paid": True})]
+    # a. Unassigned (advance paid or bypassed, no expert)
+    ready_payment_qids = [p["question_id"] for p in db.payments.find({
+        "$or": [
+            {"advance_paid": True},
+            {"advance_bypassed": True}
+        ]
+    })]
     unassigned = list(db.questions.find({
         **base_query,
-        "_id": {"$in": advance_paid_qids},
+        "_id": {"$in": ready_payment_qids},
         "assigned_expert_id": {"$in": [None, ""]}
     }).limit(10))
     
@@ -1551,7 +1680,7 @@ def dashboard_charts():
                 fallback_name=q.get("domain")
             ),
             "status": "unassigned",
-            "reason": "Expert not assigned (Advance Paid)",
+            "reason": "Expert not assigned (Advance paid or bypassed)",
             "priority": 1,
             "days_waiting": (now - q["created_at"]).days
         })

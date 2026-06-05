@@ -309,7 +309,8 @@
       const step1Done = order.price_approved;
       const step1Active = !order.price_approved;
 
-      const step2Done = !!order.payment?.advance_paid;
+      const advanceBypassed = !!order.payment?.advance_bypassed;
+      const step2Done = !!order.payment?.advance_paid || advanceBypassed;
       const step2Active = step1Done && !step2Done;
       const step2Locked = !step1Done;
 
@@ -379,11 +380,13 @@
                             Waiting for student payment...
                         </div>
                         <button class="btn btn-secondary btn-sm" style="margin-top:12px; width:100%;" onclick="setupPayment('${order._id}')">Re-send Payment Link</button>
+                        <button class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; color:#7c3aed; border-color:#c4b5fd;" onclick="bypassAdvancePayment('${order._id}')">Bypass Advance — Full Payment After Completion</button>
                     ` : `
                         <button class="btn btn-primary btn-sm" style="width:100%;" onclick="setupPayment('${order._id}')">Activate Payment Link</button>
+                        <button class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; color:#7c3aed; border-color:#c4b5fd;" onclick="bypassAdvancePayment('${order._id}')">Bypass Advance — Full Payment After Completion</button>
                     `}
                 ` : ''}
-                ${step2Done ? `<div class="workflow-step-summary">Advance Paid: ₹${order.payment.advance_amount}</div>` : ''}
+                ${step2Done ? `<div class="workflow-step-summary">${advanceBypassed ? `Advance bypassed. Full amount due after completion: ₹${order.payment?.completion_amount || order.student_price}` : `Advance Paid: ₹${order.payment.advance_amount}`}</div>` : ''}
             </div>
         </div>
       `;
@@ -397,7 +400,7 @@
                 Assign Expert
             </div>
             <div class="workflow-step-body">
-                ${step3Locked ? `<div class="workflow-step-summary">Complete advance payment first.</div>` : ''}
+                ${step3Locked ? `<div class="workflow-step-summary">Complete or bypass advance payment first.</div>` : ''}
                 ${step3Active ? renderAssignmentSectionInner(order) : ''}
                 ${step3Done ? `
                     <div class="workflow-step-summary" style="display:flex; justify-content:space-between; align-items:center;">
@@ -550,6 +553,26 @@
         openOrder(questionId);
       } else {
         toast(data.error || "Failed to set up payment", "error");
+      }
+    }
+
+    async function bypassAdvancePayment(questionId) {
+      const confirmed = await showConfirmModal({
+        title: "Bypass Advance Payment",
+        message: "Allow this order to move forward without advance payment? The student will pay the full amount after the solution preview is ready.",
+        confirmText: "Bypass Advance",
+        cancelText: "Cancel"
+      });
+      if (!confirmed) return;
+
+      const res = await apiFetch(`/admin/orders/${questionId}/bypass-advance`, { method: "POST" });
+      const data = await res.json();
+
+      if (res.ok) {
+        toast(`Advance bypassed. Full completion payment: ₹${data.completion_amount}`);
+        openOrder(questionId);
+      } else {
+        toast(data.error || "Failed to bypass advance payment", "error");
       }
     }
 

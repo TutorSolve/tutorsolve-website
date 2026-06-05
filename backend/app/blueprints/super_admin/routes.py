@@ -454,7 +454,12 @@ def stats():
     refund_requests   = db.payments.count_documents({"status": "refund_requested"})
 
     # Gross Payments = total money received from students
-    payments     = list(db.payments.find({"advance_paid": True}))
+    payments     = list(db.payments.find({
+        "$or": [
+            {"advance_paid": True},
+            {"completion_paid": True}
+        ]
+    }))
     gross_payments = sum(
         (p.get("total_amount", 0) if p.get("completion_paid")
          else p.get("advance_amount", 0))
@@ -971,7 +976,12 @@ def deny_refund(payment_id):
 @superadmin_required
 def revenue():
     db       = get_db()
-    payments = list(db.payments.find({"advance_paid": True}))
+    payments = list(db.payments.find({
+        "$or": [
+            {"advance_paid": True},
+            {"completion_paid": True}
+        ]
+    }))
     payouts_paid = list(db.payouts.find({"is_paid": True}))
     payouts_all  = list(db.payouts.find({}))
 

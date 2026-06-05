@@ -95,8 +95,10 @@ def create_checkout(question_id):
         if payment_type == "advance" and payment.get("advance_paid"):
             return jsonify({"error": "Advance already paid"}), 400
 
-        # Guard: don't let student pay completion before advance
-        if payment_type == "completion" and not payment.get("advance_paid"):
+        advance_satisfied = payment.get("advance_paid") or payment.get("advance_bypassed")
+
+        # Guard: don't let student pay completion before advance unless admin approved deferred full payment
+        if payment_type == "completion" and not advance_satisfied:
             return jsonify({"error": "Advance payment required first"}), 400
 
         # Guard: don't let student pay completion twice
@@ -115,9 +117,17 @@ def create_checkout(question_id):
                 {"$set": {"advance_session_id": session_id}}
             )
         else:
+            completion_amount = payment.get("completion_amount")
+            if payment.get("advance_bypassed"):
+                completion_amount = (
+                    completion_amount
+                    or payment.get("total_amount")
+                    or question.get("student_price")
+                )
             session_url, session_id = create_completion_session(
                 question_id, question["student_price"],
-                question["title"], student_email
+                question["title"], student_email,
+                completion_amount=completion_amount
             )
             db.payments.update_one(
                 {"question_id": oid(question_id)},
@@ -527,6 +537,7 @@ def payment_status(question_id):
     if not payment:
         return jsonify({
             "advance_paid":    False,
+            "advance_bypassed": False,
             "completion_paid": False,
             "advance_amount":  None,
             "completion_amount": None,
@@ -541,6 +552,7 @@ def payment_status(question_id):
         "advance_amount":    payment.get("advance_amount",  advance),
         "completion_amount": payment.get("completion_amount", completion),
         "total_amount":      payment.get("total_amount",    question["student_price"]),
+        "advance_bypassed":  payment.get("advance_bypassed", False),
         "status":            payment.get("status",          "pending"),
         "gateway":           "stripe"
     }), 200

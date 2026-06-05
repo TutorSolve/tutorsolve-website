@@ -62,13 +62,87 @@ def send_expert_broadcast_email(expert_email, expert_name, domain, question_titl
         to_email=expert_email,
         to_name=expert_name,
         subject=f"New {domain} question available — TutorSolve",
-        html_content=f"""
-            <p>Hi {expert_name},</p>
-            <p>A new question in your domain (<strong>{domain}</strong>) is available:</p>
-            <p><strong>{question_title}</strong></p>
-            <p>Log in to the job board to express interest.</p>
-            <p>— The TutorSolve Team</p>
-        """
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px;">
+
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td align="center">
+
+                <table width="600" cellpadding="0" cellspacing="0"
+                       style="background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+
+                    <tr>
+                        <td>
+
+                            <h2 style="color: #1f2937; margin-top: 0;">
+                                New Question Available
+                            </h2>
+
+                            <p style="font-size: 16px; color: #374151;">
+                                Hi <strong>{expert_name}</strong>,
+                            </p>
+
+                            <p style="font-size: 16px; color: #374151; line-height: 1.6;">
+                                A new question matching your expertise in
+                                <strong>{domain}</strong> has been posted on TutorSolve.
+                            </p>
+
+                            <div style="
+                                background-color: #f9fafb;
+                                border-left: 4px solid #2563eb;
+                                padding: 15px;
+                                margin: 20px 0;
+                            ">
+                                <strong style="font-size: 17px; color: #111827;">
+                                    {question_title}
+                                </strong>
+                            </div>
+
+                            <p style="font-size: 16px; color: #374151; line-height: 1.6;">
+                                Visit your dashboard to review the question and
+                                express your interest.
+                            </p>
+
+                            <p style="text-align: center; margin: 30px 0;">
+                                <a href="https://www.tutorsolve.com"
+                                   style="
+                                   background-color: #2563eb;
+                                   color: white;
+                                   text-decoration: none;
+                                   padding: 12px 24px;
+                                   border-radius: 6px;
+                                   font-weight: bold;
+                                   display: inline-block;
+                                   ">
+                                    View Job Board
+                                </a>
+                            </p>
+
+                            <hr style="border: none; border-top: 1px solid #e5e7eb;">
+
+                            <p style="font-size: 14px; color: #6b7280;">
+                                Thank you,<br>
+                                <strong>The TutorSolve Team</strong>
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
+"""
     )
 
 
@@ -78,13 +152,100 @@ def send_expert_assigned_email(expert_email, expert_name, question_title, payout
         to_email=expert_email,
         to_name=expert_name,
         subject="You've been assigned a task — TutorSolve",
-        html_content=f"""
-            <p>Hi {expert_name},</p>
-            <p>You have been assigned the task: <strong>{question_title}</strong></p>
-            <p>Payout: <strong>${payout:.2f} USD</strong> (paid after 20-day hold)</p>
-            <p>Log in to your dashboard to begin.</p>
-            <p>— The TutorSolve Team</p>
-        """
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px;">
+
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td align="center">
+
+                <table width="600" cellpadding="0" cellspacing="0"
+                       style="background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+
+                    <tr>
+                        <td>
+
+                            <h2 style="color: #1f2937; margin-top: 0;">
+                                Task Assignment Notification
+                            </h2>
+
+                            <p style="font-size: 16px; color: #374151;">
+                                Hi <strong>{expert_name}</strong>,
+                            </p>
+
+                            <p style="font-size: 16px; color: #374151; line-height: 1.6;">
+                                Congratulations! A task has been assigned to you.
+                            </p>
+
+                            <div style="
+                                background-color: #f9fafb;
+                                border-left: 4px solid #2563eb;
+                                padding: 15px;
+                                margin: 20px 0;
+                            ">
+                                <strong style="font-size: 17px; color: #111827;">
+                                    {question_title}
+                                </strong>
+                            </div>
+
+                            <div style="
+                                background-color: #eff6ff;
+                                border: 1px solid #bfdbfe;
+                                border-radius: 6px;
+                                padding: 15px;
+                                margin: 20px 0;
+                            ">
+                                <p style="margin: 0; font-size: 16px; color: #1e40af;">
+                                    <strong>Payout:</strong> ${payout:.2f} USD
+                                </p>
+                                <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">
+                                    Payment will be released after the standard 20-day hold period.
+                                </p>
+                            </div>
+
+                            <p style="font-size: 16px; color: #374151; line-height: 1.6;">
+                                Please log in to your TutorSolve dashboard to review the requirements and begin working on the task.
+                            </p>
+
+                            <p style="text-align: center; margin: 30px 0;">
+                                <a href="https://www.tutorsolve.com"
+                                   style="
+                                   background-color: #2563eb;
+                                   color: white;
+                                   text-decoration: none;
+                                   padding: 12px 24px;
+                                   border-radius: 6px;
+                                   font-weight: bold;
+                                   display: inline-block;
+                                   ">
+                                    Open Dashboard
+                                </a>
+                            </p>
+
+                            <hr style="border: none; border-top: 1px solid #e5e7eb;">
+
+                            <p style="font-size: 14px; color: #6b7280;">
+                                Thank you,<br>
+                                <strong>The TutorSolve Team</strong>
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
+"""
     )
 
 
