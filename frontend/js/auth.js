@@ -30,13 +30,9 @@ async function login(email, password) {
 
     const studentRedirectUrl = hasPendingQuestionDraft() ? "/student/orders.html" : "/student/dashboard.html";
 
-    const roleRedirects = {
-        student: studentRedirectUrl,
-        expert: "/expert/dashboard.html",
-        employee: "/admin/dashboard.html",
-        super_admin: "/super-admin/dashboard.html",
-    };
-    window.location.href = roleRedirects[data.role] || "/auth/login.html";
+    window.location.href = normalizeRole(data.role) === "student"
+        ? studentRedirectUrl
+        : getDashboardUrl(data.role, "/auth/login.html");
 }
 
 async function signup(formData) {

@@ -26,7 +26,7 @@
         <nav>
           <ul class="nav-links">
             <li><a href="#how-it-works" class="nav-link">How it Works</a></li>
-            <li><a href="#our-services" class="nav-link">Our Services</a></li>
+
             <li>
               <a href="/pages/ask-question.html" class="nav-link"
                 >Ask a Question</a
@@ -751,7 +751,7 @@
       const actions = document.getElementById("nav-actions");
       if (typeof isLoggedIn === "function" && isLoggedIn()) {
         actions.innerHTML = `
-                <a href="/${getRole()}/dashboard.html" class="btn btn-secondary btn-sm">Dashboard</a>
+                <a href="${getDashboardUrl()}" class="btn btn-secondary btn-sm">Dashboard</a>
                 <button onclick="logout()" class="btn btn-ghost btn-sm">Logout</button>`;
       } else {
         actions.innerHTML = `

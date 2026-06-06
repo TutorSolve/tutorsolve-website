@@ -100,6 +100,15 @@ function getToken() {
 function getRole() {
   return normalizeRole(localStorage.getItem("ts_role"));
 }
+function getDashboardUrl(role = getRole(), fallback = "/index.html") {
+  const dashboardUrls = {
+    student: "/student/dashboard.html",
+    expert: "/expert/dashboard.html",
+    employee: "/admin/dashboard.html",
+    super_admin: "/super-admin/dashboard.html",
+  };
+  return dashboardUrls[normalizeRole(role)] || fallback;
+}
 function isLoggedIn() {
   const token = getToken();
   if (!token || isTokenExpired(token)) {
