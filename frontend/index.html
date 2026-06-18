@@ -1,137 +1,116 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TutorSolve — Expert Help for Your Assignments</title>
-    <link rel="stylesheet" href="/css/base.css" />
-    <link rel="stylesheet" href="/css/landing.css" />
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-  </head>
 
-  <body>
-    <!-- Header -->
-    <header class="header">
-      <div class="nav-inner">
-        <a href="/index.html" class="logo">
-          <img src="./assets/logo.svg" alt="TutorSolve" />
-          <span>TutorSolve</span>
-        </a>
-        <nav>
-          <ul class="nav-links">
-            <li><a href="#how-it-works" class="nav-link">How it Works</a></li>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TutorSolve — Expert Help for Your Assignments</title>
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/landing.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
 
-            <li>
-              <a href="/pages/ask-question.html" class="nav-link"
-                >Ask a Question</a
-              >
-            </li>
-            <li>
-              <a href="/pages/experts.html" class="nav-link">Our Experts</a>
-            </li>
-            <li><a href="#testimonials" class="nav-link">Reviews</a></li>
-          </ul>
-        </nav>
-        <div class="nav-actions" id="nav-actions">
-          <!-- Populated by JS -->
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="nav-inner">
+      <a href="/index.html" class="logo">
+        <img src="./assets/logo.svg" alt="TutorSolve" />
+        <span>TutorSolve</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#how-it-works" class="nav-link">How it Works</a></li>
+
+          <li>
+            <a href="/pages/ask-question.html" class="nav-link">Ask a Question</a>
+          </li>
+          <li>
+            <a href="/pages/experts.html" class="nav-link">Our Experts</a>
+          </li>
+          <li><a href="#testimonials" class="nav-link">Reviews</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions" id="nav-actions">
+        <!-- Populated by JS -->
+      </div>
+      <div class="nav-toggle">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container hero-content reveal">
+        <h1 class="hero-headline">Expert Help for Your Assignments.</h1>
+        <p class="hero-subtext">
+          Get instant access to verified experts. Solve any question in
+          minutes with step-by-step guidance.
+        </p>
+
+        <div class="hero-search-bar">
+          <input type="text" id="hero-input" placeholder="Type your question here..." />
+          <button id="hero-btn" class="btn btn-primary">Get Help Now</button>
         </div>
-        <div class="nav-toggle">
-          <span></span>
-          <span></span>
-          <span></span>
+
+        <div class="hero-stats">
+          <div class="stat-badge">
+            <span class="stat-dot"></span>
+            <span id="active-experts-count">...</span> Active Experts Online
+          </div>
+          <div class="stat-badge">
+            <span id="solved-count">...</span> Questions Solved
+          </div>
+        </div>
+
+        <div class="ticker-wrap">
+          <p class="ticker-item">Physics Question #992 just solved!</p>
         </div>
       </div>
-    </header>
+    </section>
 
-    <main>
-      <!-- Hero Section -->
-      <section class="hero">
-        <div class="container hero-content reveal">
-          <h1 class="hero-headline">Expert Help for Your Assignments.</h1>
-          <p class="hero-subtext">
-            Get instant access to verified experts. Solve any question in
-            minutes with step-by-step guidance.
-          </p>
+    <!-- How it works Section -->
+    <section id="how-it-works" class="about" style="background: var(--color-white)">
+      <div class="container">
+        <div class="reveal" style="text-align: center; margin-bottom: 70px">
+          <h2 style="font-size: 42px; margin-bottom: 18px">
+            How TutorSolve Works
+          </h2>
 
-          <div class="hero-search-bar">
-            <input
-              type="text"
-              id="hero-input"
-              placeholder="Type your question here..."
-            />
-            <button id="hero-btn" class="btn btn-primary">Get Help Now</button>
-          </div>
-
-          <div class="hero-stats">
-            <div class="stat-badge">
-              <span class="stat-dot"></span>
-              <span id="active-experts-count">...</span> Active Experts Online
-            </div>
-            <div class="stat-badge">
-              <span id="solved-count">...</span> Questions Solved
-            </div>
-          </div>
-
-          <div class="ticker-wrap">
-            <p class="ticker-item">Physics Question #992 just solved!</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- How it works Section -->
-      <section
-        id="how-it-works"
-        class="about"
-        style="background: var(--color-white)"
-      >
-        <div class="container">
-          <div class="reveal" style="text-align: center; margin-bottom: 70px">
-            <h2 style="font-size: 42px; margin-bottom: 18px">
-              How TutorSolve Works
-            </h2>
-
-            <p
-              style="
+          <p style="
                 max-width: 760px;
                 margin: 0 auto;
                 color: var(--color-gray-600);
                 line-height: 1.8;
-              "
-            >
-              A secure, transparent, and structured workflow designed to protect
-              both students and experts while ensuring high-quality academic
-              assistance.
-            </p>
-          </div>
+              ">
+            A secure, transparent, and structured workflow designed to protect
+            both students and experts while ensuring high-quality academic
+            assistance.
+          </p>
+        </div>
 
-          <div
-            style="
+        <div style="
               display: grid;
               grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
               gap: 24px;
               position: relative;
-            "
-          >
-            <div
-              class="how-card how-card-1"
-              style="
+            ">
+          <div class="how-card how-card-1" style="
                 background: white;
                 border: 1px solid rgba(0, 0, 0, 0.06);
                 border-radius: 24px;
                 padding: 32px 28px;
                 position: relative;
                 transition: 0.3s ease;
-              "
-            >
-              <div
-                class="how-card-badge"
-                style="
+              ">
+            <div class="how-card-badge" style="
                   width: 52px;
                   height: 52px;
                   border-radius: 14px;
@@ -142,35 +121,29 @@
                   font-weight: 700;
                   margin-bottom: 24px;
                   color: var(--brand-primary);
-                "
-              >
-                01
-              </div>
-
-              <h3 style="margin-bottom: 14px; font-size: 22px">
-                Post Your Question
-              </h3>
-
-              <p style="color: var(--color-gray-600); line-height: 1.7">
-                Submit your assignment, coding task, report, or academic problem
-                with complete details and deadline requirements.
-              </p>
+                ">
+              01
             </div>
 
-            <div
-              class="how-card how-card-2"
-              style="
+            <h3 style="margin-bottom: 14px; font-size: 22px">
+              Post Your Question
+            </h3>
+
+            <p style="color: var(--color-gray-600); line-height: 1.7">
+              Submit your assignment, coding task, report, or academic problem
+              with complete details and deadline requirements.
+            </p>
+          </div>
+
+          <div class="how-card how-card-2" style="
                 background: white;
                 border: 1px solid rgba(0, 0, 0, 0.06);
                 border-radius: 24px;
                 padding: 32px 28px;
                 position: relative;
                 transition: 0.3s ease;
-              "
-            >
-              <div
-                class="how-card-badge"
-                style="
+              ">
+            <div class="how-card-badge" style="
                   width: 52px;
                   height: 52px;
                   border-radius: 14px;
@@ -181,35 +154,29 @@
                   font-weight: 700;
                   margin-bottom: 24px;
                   color: var(--brand-primary);
-                "
-              >
-                02
-              </div>
-
-              <h3 style="margin-bottom: 14px; font-size: 22px">
-                Pay 50% to Start
-              </h3>
-
-              <p style="color: var(--color-gray-600); line-height: 1.7">
-                Once pricing is confirmed, you only pay half upfront so our
-                experts can immediately begin working on your task securely.
-              </p>
+                ">
+              02
             </div>
 
-            <div
-              class="how-card how-card-3"
-              style="
+            <h3 style="margin-bottom: 14px; font-size: 22px">
+              Pay 50% to Start
+            </h3>
+
+            <p style="color: var(--color-gray-600); line-height: 1.7">
+              Once pricing is confirmed, you only pay half upfront so our
+              experts can immediately begin working on your task securely.
+            </p>
+          </div>
+
+          <div class="how-card how-card-3" style="
                 background: white;
                 border: 1px solid rgba(0, 0, 0, 0.06);
                 border-radius: 24px;
                 padding: 32px 28px;
                 position: relative;
                 transition: 0.3s ease;
-              "
-            >
-              <div
-                class="how-card-badge"
-                style="
+              ">
+            <div class="how-card-badge" style="
                   width: 52px;
                   height: 52px;
                   border-radius: 14px;
@@ -220,35 +187,29 @@
                   font-weight: 700;
                   margin-bottom: 24px;
                   color: var(--brand-primary);
-                "
-              >
-                03
-              </div>
-
-              <h3 style="margin-bottom: 14px; font-size: 22px">
-                Review 25% Preview
-              </h3>
-
-              <p style="color: var(--color-gray-600); line-height: 1.7">
-                Before final payment, you receive a secure preview of the
-                completed solution to verify quality and accuracy.
-              </p>
+                ">
+              03
             </div>
 
-            <div
-              class="how-card how-card-4"
-              style="
+            <h3 style="margin-bottom: 14px; font-size: 22px">
+              Review 25% Preview
+            </h3>
+
+            <p style="color: var(--color-gray-600); line-height: 1.7">
+              Before final payment, you receive a secure preview of the
+              completed solution to verify quality and accuracy.
+            </p>
+          </div>
+
+          <div class="how-card how-card-4" style="
                 background: white;
                 border: 1px solid rgba(0, 0, 0, 0.06);
                 border-radius: 24px;
                 padding: 32px 28px;
                 position: relative;
                 transition: 0.3s ease;
-              "
-            >
-              <div
-                class="how-card-badge"
-                style="
+              ">
+            <div class="how-card-badge" style="
                   width: 52px;
                   height: 52px;
                   border-radius: 14px;
@@ -259,244 +220,210 @@
                   font-weight: 700;
                   margin-bottom: 24px;
                   color: var(--brand-primary);
-                "
-              >
-                04
-              </div>
-
-              <h3 style="margin-bottom: 14px; font-size: 22px">
-                Unlock Final Solution
-              </h3>
-
-              <p style="color: var(--color-gray-600); line-height: 1.7">
-                Complete the remaining payment and instantly access the full
-                solution, files, explanations, and deliverables.
-              </p>
+                ">
+              04
             </div>
+
+            <h3 style="margin-bottom: 14px; font-size: 22px">
+              Unlock Final Solution
+            </h3>
+
+            <p style="color: var(--color-gray-600); line-height: 1.7">
+              Complete the remaining payment and instantly access the full
+              solution, files, explanations, and deliverables.
+            </p>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Our Services -->
-      <section id="our-services" class="services-section">
-        <div class="container">
-          <div class="section-header reveal">
-            <h2>Our Services</h2>
-            <p
-              style="
+    <!-- Our Services -->
+    <section id="our-services" class="services-section">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2>Our Services</h2>
+          <p style="
                 color: var(--color-gray-500);
                 max-width: 760px;
                 margin: 0 auto;
-              "
-            >
-              Practical academic support designed to help students complete work
-              accurately, clearly, and on time.
+              ">
+            Practical academic support designed to help students complete work
+            accurately, clearly, and on time.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature-card reveal service-card">
+            <div class="feature-icon"><span>01</span></div>
+            <h3>Homework Help</h3>
+            <p>Get accurate and timely help for all types of homework.</p>
+          </div>
+          <div class="feature-card reveal service-card">
+            <div class="feature-icon"><span>02</span></div>
+            <h3>Lab Report</h3>
+            <p>Professional support for lab reports.</p>
+          </div>
+          <div class="feature-card reveal service-card">
+            <div class="feature-icon"><span>03</span></div>
+            <h3>Project Report Help</h3>
+            <p>
+              Complete assistance for academic projects, project reports, and
+              final submissions.
             </p>
           </div>
-          <div class="feature-grid">
-            <div class="feature-card reveal service-card">
-              <div class="feature-icon"><span>01</span></div>
-              <h3>Homework Help</h3>
-              <p>Get accurate and timely help for all types of homework.</p>
-            </div>
-            <div class="feature-card reveal service-card">
-              <div class="feature-icon"><span>02</span></div>
-              <h3>Lab Report</h3>
-              <p>Professional support for lab reports.</p>
-            </div>
-            <div class="feature-card reveal service-card">
-              <div class="feature-icon"><span>03</span></div>
-              <h3>Project Report Help</h3>
-              <p>
-                Complete assistance for academic projects, project reports, and
-                final submissions.
-              </p>
-            </div>
-            <div class="feature-card reveal service-card">
-              <div class="feature-icon"><span>04</span></div>
-              <h3>Question &amp; Answer Solutions</h3>
-              <p>
-                Get detailed solutions and explanations for academic questions
-                and problem-solving tasks.
-              </p>
-            </div>
-            <div class="feature-card reveal service-card">
-              <div class="feature-icon"><span>05</span></div>
-              <h3>PPT &amp; Presentation Design</h3>
-              <p>
-                Create professional PowerPoint presentations with clean design
-                and quality content.
-              </p>
-            </div>
-            <div class="feature-card reveal service-card">
-              <div class="feature-icon"><span>06</span></div>
-              <h3>Research Paper Writing</h3>
-              <p>
-                Expert help for research papers, literature reviews,
-                referencing, and academic writing.
-              </p>
-            </div>
-            <div class="feature-card reveal service-card service-card-wide">
-              <div class="feature-icon"><span>07</span></div>
-              <h3>24×7 Student Support</h3>
-              <p>
-                Our support team is available 24/7 to assist you anytime with
-                your academic needs.
-              </p>
-            </div>
+          <div class="feature-card reveal service-card">
+            <div class="feature-icon"><span>04</span></div>
+            <h3>Question &amp; Answer Solutions</h3>
+            <p>
+              Get detailed solutions and explanations for academic questions
+              and problem-solving tasks.
+            </p>
+          </div>
+          <div class="feature-card reveal service-card">
+            <div class="feature-icon"><span>05</span></div>
+            <h3>PPT &amp; Presentation Design</h3>
+            <p>
+              Create professional PowerPoint presentations with clean design
+              and quality content.
+            </p>
+          </div>
+          <div class="feature-card reveal service-card">
+            <div class="feature-icon"><span>06</span></div>
+            <h3>Research Paper Writing</h3>
+            <p>
+              Expert help for research papers, literature reviews,
+              referencing, and academic writing.
+            </p>
+          </div>
+          <div class="feature-card reveal service-card service-card-wide">
+            <div class="feature-icon"><span>07</span></div>
+            <h3>24×7 Student Support</h3>
+            <p>
+              Our support team is available 24/7 to assist you anytime with
+              your academic needs.
+            </p>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Testimonials -->
-      <section id="testimonials" class="testimonials">
-        <div class="container">
-          <div class="section-header reveal">
-            <h2>Student Stories</h2>
-            <p style="color: var(--color-gray-500)">
-              Don't just take our word for it.
-            </p>
-          </div>
-          <div
-            id="testimonials-grid"
-            style="
+    <!-- Testimonials -->
+    <section id="testimonials" class="testimonials">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2>Student Stories</h2>
+          <p style="color: var(--color-gray-500)">
+            Don't just take our word for it.
+          </p>
+        </div>
+        <div id="testimonials-grid" style="
               display: grid;
               grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
               gap: 24px;
-            "
-          >
-            <div class="testimonial-card reveal">
-              <div style="color: #f59e0b; margin-bottom: 16px">★★★★★</div>
-              <p
-                style="
+            ">
+          <div class="testimonial-card reveal">
+            <div style="color: #f59e0b; margin-bottom: 16px">★★★★★</div>
+            <p style="
                   font-style: italic;
                   color: var(--color-gray-700);
                   margin-bottom: 24px;
-                "
-              >
-                "The step-by-step solution for my Engineering Mechanics
-                assignment was a lifesaver. I finally understood the concepts!"
-              </p>
-              <div style="display: flex; align-items: center; gap: 12px">
-                <div
-                  style="
+                ">
+              "The step-by-step solution for my Engineering Mechanics
+              assignment was a lifesaver. I finally understood the concepts!"
+            </p>
+            <div style="display: flex; align-items: center; gap: 12px">
+              <div style="
                     width: 40px;
                     height: 40px;
                     border-radius: 50%;
                     background: #ccc;
-                  "
-                ></div>
-                <div>
-                  <h4 style="font-size: 14px">Sarah Jenkins</h4>
-                  <span style="font-size: 12px; color: var(--color-gray-500)"
-                    >Engineering Student</span
-                  >
-                </div>
+                  "></div>
+              <div>
+                <h4 style="font-size: 14px">Sarah Jenkins</h4>
+                <span style="font-size: 12px; color: var(--color-gray-500)">Engineering Student</span>
               </div>
             </div>
-            <div class="testimonial-card reveal">
-              <div style="color: #f59e0b; margin-bottom: 16px">★★★★★</div>
-              <p
-                style="
+          </div>
+          <div class="testimonial-card reveal">
+            <div style="color: #f59e0b; margin-bottom: 16px">★★★★★</div>
+            <p style="
                   font-style: italic;
                   color: var(--color-gray-700);
                   margin-bottom: 24px;
-                "
-              >
-                "Instant response and very high-quality work. The tutor even
-                stayed back to answer my follow-up questions."
-              </p>
-              <div style="display: flex; align-items: center; gap: 12px">
-                <div
-                  style="
+                ">
+              "Instant response and very high-quality work. The tutor even
+              stayed back to answer my follow-up questions."
+            </p>
+            <div style="display: flex; align-items: center; gap: 12px">
+              <div style="
                     width: 40px;
                     height: 40px;
                     border-radius: 50%;
                     background: #ccc;
-                  "
-                ></div>
-                <div>
-                  <h4 style="font-size: 14px">David Chen</h4>
-                  <span style="font-size: 12px; color: var(--color-gray-500)"
-                    >Computer Science Major</span
-                  >
-                </div>
+                  "></div>
+              <div>
+                <h4 style="font-size: 14px">David Chen</h4>
+                <span style="font-size: 12px; color: var(--color-gray-500)">Computer Science Major</span>
               </div>
             </div>
-            <div class="testimonial-card reveal">
-              <div style="color: #f59e0b; margin-bottom: 16px">★★★★★</div>
-              <p
-                style="
+          </div>
+          <div class="testimonial-card reveal">
+            <div style="color: #f59e0b; margin-bottom: 16px">★★★★★</div>
+            <p style="
                   font-style: italic;
                   color: var(--color-gray-700);
                   margin-bottom: 24px;
-                "
-              >
-                "Affordable and reliable. I've been using TutorSolve for all my
-                Chemistry labs this semester."
-              </p>
-              <div style="display: flex; align-items: center; gap: 12px">
-                <div
-                  style="
+                ">
+              "Affordable and reliable. I've been using TutorSolve for all my
+              Chemistry labs this semester."
+            </p>
+            <div style="display: flex; align-items: center; gap: 12px">
+              <div style="
                     width: 40px;
                     height: 40px;
                     border-radius: 50%;
                     background: #ccc;
-                  "
-                ></div>
-                <div>
-                  <h4 style="font-size: 14px">Emma Rodriguez</h4>
-                  <span style="font-size: 12px; color: var(--color-gray-500)"
-                    >Pre-med Student</span
-                  >
-                </div>
+                  "></div>
+              <div>
+                <h4 style="font-size: 14px">Emma Rodriguez</h4>
+                <span style="font-size: 12px; color: var(--color-gray-500)">Pre-med Student</span>
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Become an Expert CTA -->
-      <section class="expert-cta-section" aria-labelledby="expert-cta-title">
-        <div class="container">
-          <div class="expert-cta-card reveal">
-            <div class="expert-cta-content">
-              <span class="expert-cta-kicker"
-                >For tutors and professionals</span
-              >
-              <h2 id="expert-cta-title">Become an Expert at TutorSolve</h2>
-              <p>
-                Turn your subject expertise into meaningful impact and flexible
-                income. Help students worldwide, choose tasks that match your
-                strengths, and grow your professional profile on a trusted
-                platform.
-              </p>
-              <ul class="expert-cta-points">
-                <li>Choose your own schedule and preferred subjects.</li>
-                <li>Work with verified students on real academic tasks.</li>
-                <li>Build credibility with ratings and repeat clients.</li>
-              </ul>
-              <a
-                href="/auth/expert-apply.html"
-                class="btn btn-primary expert-cta-btn"
-                >Become an Expert</a
-              >
-            </div>
+    <!-- Become an Expert CTA -->
+    <section class="expert-cta-section" aria-labelledby="expert-cta-title">
+      <div class="container">
+        <div class="expert-cta-card reveal">
+          <div class="expert-cta-content">
+            <span class="expert-cta-kicker">For tutors and professionals</span>
+            <h2 id="expert-cta-title">Become an Expert at TutorSolve</h2>
+            <p>
+              Turn your subject expertise into meaningful impact and flexible
+              income. Help students worldwide, choose tasks that match your
+              strengths, and grow your professional profile on a trusted
+              platform.
+            </p>
+            <ul class="expert-cta-points">
+              <li>Choose your own schedule and preferred subjects.</li>
+              <li>Work with verified students on real academic tasks.</li>
+              <li>Build credibility with ratings and repeat clients.</li>
+            </ul>
+            <a href="/auth/expert-apply.html" class="btn btn-primary expert-cta-btn">Become an Expert</a>
+          </div>
 
-            <div class="expert-cta-image-wrap">
-              <img
-                src="/assets/expert-cta-illustration.svg"
-                alt="TutorSolve expert helping students online"
-                class="expert-cta-image"
-                loading="lazy"
-              />
-            </div>
+          <div class="expert-cta-image-wrap">
+            <img src="/assets/expert-cta-illustration.svg" alt="TutorSolve expert helping students online"
+              class="expert-cta-image" loading="lazy" />
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Contact Section -->
-      <!-- <section id="contact" class="contact">
+    <!-- Contact Section -->
+    <!-- <section id="contact" class="contact">
         <div class="container">
           <div class="contact-grid reveal">
             <div>
@@ -600,238 +527,197 @@
           </div>
         </div>
       </section> -->
-    </main>
+  </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-grid">
-          <div class="footer-brand">
-            <a href="/index.html" class="logo" aria-label="TutorSolve home">
-              <img src="/assets/logo.svg" alt="TutorSolve" />
-              <span>TutorSolve</span>
-            </a>
-            <p>
-              Empowering students with instant access to academic expertise.
-            </p>
-          </div>
-
-          <div class="footer-column">
-            <h4>Quick Links</h4>
-            <ul>
-              <li>
-                <a href="/index.html#how-it-works" class="nav-link"
-                  >How it Works</a
-                >
-              </li>
-              <li>
-                <a href="/index.html#our-services" class="nav-link"
-                  >Our Services</a
-                >
-              </li>
-              <li>
-                <a href="/pages/ask-question.html" class="nav-link"
-                  >Ask a question</a
-                >
-              </li>
-              <li>
-                <a href="/pages/experts.html" class="nav-link">Experts</a>
-              </li>
-              <li>
-                <a href="/pages/reviews.html" class="nav-link">Reviews</a>
-              </li>
-            </ul>
-          </div>
-
-          <div class="footer-column">
-            <h4>Student</h4>
-            <ul>
-              <li><a href="/auth/login.html">Login</a></li>
-              <li><a href="/auth/signup.html">Sign Up</a></li>
-              <li><a href="/privacy.html">Privacy policy</a></li>
-              <li><a href="/terms.html">Terms and condition</a></li>
-              <li><a href="/terms.html">Refund policy</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-column">
-            <h4>Experts</h4>
-            <ul>
-              <li><a href="/auth/expert-apply.html">Signup</a></li>
-              <li><a href="/privacy.html">Privacy policy</a></li>
-              <li><a href="/terms.html">Payment policy</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-column footer-contact">
-            <h4>Contact</h4>
-            <p>Phone: <a href="tel:+916264464909">+91 62644 64909</a></p>
-            <p>
-              Email:
-              <a href="mailto:help@tutorsolve.com">help@tutorsolve.com</a>
-            </p>
-            <p>Office - NQI PLAZA GREATER NOIDA</p>
-          </div>
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/index.html" class="logo" aria-label="TutorSolve home">
+            <img src="/assets/logo.svg" alt="TutorSolve" />
+            <span>TutorSolve</span>
+          </a>
+          <p>
+            Empowering students with instant access to academic expertise.
+          </p>
         </div>
 
-        <div class="footer-bottom">
-          <p>&copy; 2024 TutorSolve. All rights reserved.</p>
-          <div class="footer-social">
-            <a
-              href="https://www.facebook.com/people/TutorSolve-international-Private-limited/100084052973101/"
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"
-                />
-              </svg>
-            </a>
-            <a
-              href="https://www.instagram.com/tutorsolve/"
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-              </svg>
-            </a>
-            <a
-              href="https://www.linkedin.com/company/104666725/admin/dashboard/"
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path
-                  d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"
-                />
-                <rect x="2" y="9" width="4" height="12" />
-                <circle cx="4" cy="4" r="2" />
-              </svg>
-            </a>
-          </div>
+        <div class="footer-column">
+          <h4>Quick Links</h4>
+          <ul>
+            <li>
+              <a href="/index.html#how-it-works" class="nav-link">How it Works</a>
+            </li>
+            <li>
+              <a href="/index.html#our-services" class="nav-link">Our Services</a>
+            </li>
+            <li>
+              <a href="/pages/ask-question.html" class="nav-link">Ask a question</a>
+            </li>
+            <li>
+              <a href="/pages/experts.html" class="nav-link">Experts</a>
+            </li>
+            <li>
+              <a href="/pages/reviews.html" class="nav-link">Reviews</a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="footer-column">
+          <h4>Student</h4>
+          <ul>
+            <li><a href="/auth/login.html">Login</a></li>
+            <li><a href="/auth/signup.html">Sign Up</a></li>
+            <li><a href="/expert/privacy.html">Privacy policy</a></li>
+            <li><a href="/terms.html">Terms and condition</a></li>
+            <li><a href="/terms.html">Refund policy</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-column">
+          <h4>Experts</h4>
+          <ul>
+            <li><a href="/auth/expert-apply.html">Signup</a></li>
+            <li><a href="/expert/privacy.html">Privacy policy</a></li>
+            <li><a href="/expert/payment_policy.html">Payment policy</a></li>
+            <li><a href="/expert/how_it_works_expert.html">How it works (Expert)</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-column footer-contact">
+          <h4>Contact</h4>
+          <p>Phone: <a href="tel:+916264464909">+91 62644 64909</a></p>
+          <p>
+            Email:
+            <a href="mailto:help@tutorsolve.com">help@tutorsolve.com</a>
+          </p>
+          <p>Office - NQI PLAZA GREATER NOIDA</p>
         </div>
       </div>
-    </footer>
 
-    <script src="/js/runtime-env.js"></script>
-    <script src="/js/runtime-config.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/toast.js"></script>
-    <script src="/js/landing.js"></script>
-    <script>
-      // Specific integration for auth state
-      const actions = document.getElementById("nav-actions");
-      if (typeof isLoggedIn === "function" && isLoggedIn()) {
-        actions.innerHTML = `
+      <div class="footer-bottom">
+        <p>&copy; 2024 TutorSolve. All rights reserved.</p>
+        <div class="footer-social">
+          <a href="https://www.facebook.com/people/TutorSolve-international-Private-limited/100084052973101/"
+            target="_blank" rel="noreferrer noopener">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+            </svg>
+          </a>
+          <a href="https://www.instagram.com/tutorsolve/" target="_blank" rel="noreferrer noopener">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+              <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+            </svg>
+          </a>
+          <a href="https://www.linkedin.com/company/104666725/admin/dashboard/" target="_blank"
+            rel="noreferrer noopener">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z" />
+              <rect x="2" y="9" width="4" height="12" />
+              <circle cx="4" cy="4" r="2" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/runtime-env.js"></script>
+  <script src="/js/runtime-config.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/landing.js"></script>
+  <script>
+    // Specific integration for auth state
+    const actions = document.getElementById("nav-actions");
+    if (typeof isLoggedIn === "function" && isLoggedIn()) {
+      actions.innerHTML = `
                 <a href="${getDashboardUrl()}" class="btn btn-secondary btn-sm">Dashboard</a>
                 <button onclick="logout()" class="btn btn-ghost btn-sm">Logout</button>`;
-      } else {
-        actions.innerHTML = `
+    } else {
+      actions.innerHTML = `
                 <a href="/auth/login.html" class="btn btn-ghost btn-sm">Login</a>
                 <a href="/auth/signup.html" class="btn btn-secondary btn-sm">Sign Up</a>`;
-      }
+    }
 
-      // Hero form interaction
-      const heroBtn = document.getElementById("hero-btn");
-      if (heroBtn) {
-        heroBtn.addEventListener("click", async () => {
-          const q = document.getElementById("hero-input").value.trim();
-          if (!q) return;
-          sessionStorage.setItem("pending_question", q);
+    // Hero form interaction
+    const heroBtn = document.getElementById("hero-btn");
+    if (heroBtn) {
+      heroBtn.addEventListener("click", async () => {
+        const q = document.getElementById("hero-input").value.trim();
+        if (!q) return;
+        sessionStorage.setItem("pending_question", q);
 
-          if (
-            typeof isLoggedIn === "function" &&
-            isLoggedIn() &&
-            getRole() === "student"
-          ) {
-            if (typeof apiFetch === "function") {
-              try {
-                const detailUrl =
-                  typeof createStudentOrderFromLandingQuestion === "function"
-                    ? await createStudentOrderFromLandingQuestion(q)
-                    : null;
-                window.location.href = detailUrl || "/student/orders.html";
-              } catch (err) {
-                if (typeof toast === "function") {
-                  toast(err.message || "Failed to create your order.", "error");
-                }
-                window.location.href = "/student/orders.html";
+        if (
+          typeof isLoggedIn === "function" &&
+          isLoggedIn() &&
+          getRole() === "student"
+        ) {
+          if (typeof apiFetch === "function") {
+            try {
+              const detailUrl =
+                typeof createStudentOrderFromLandingQuestion === "function"
+                  ? await createStudentOrderFromLandingQuestion(q)
+                  : null;
+              window.location.href = detailUrl || "/student/orders.html";
+            } catch (err) {
+              if (typeof toast === "function") {
+                toast(err.message || "Failed to create your order.", "error");
               }
-            } else {
-              window.location.href = "/student/dashboard.html";
+              window.location.href = "/student/orders.html";
             }
           } else {
-            window.location.href = "/auth/login.html";
+            window.location.href = "/student/dashboard.html";
           }
-        });
-      }
-
-      // Fetch and render real stats
-      async function loadStats() {
-        try {
-          const res = await fetch(`${API_BASE}/public/stats`);
-          const stats = await res.json();
-          if (stats) {
-            const expertsEl = document.getElementById("active-experts-count");
-            const solvedEl = document.getElementById("solved-count");
-            if (expertsEl && stats.active_experts !== undefined) {
-              expertsEl.textContent = stats.active_experts;
-            }
-            if (solvedEl && stats.total_solved !== undefined) {
-              solvedEl.textContent = stats.total_solved.toLocaleString();
-            }
-          }
-        } catch (e) {
-          console.error("Failed to load real stats:", e);
+        } else {
+          window.location.href = "/auth/login.html";
         }
+      });
+    }
+
+    // Fetch and render real stats
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_BASE}/public/stats`);
+        const stats = await res.json();
+        if (stats) {
+          const expertsEl = document.getElementById("active-experts-count");
+          const solvedEl = document.getElementById("solved-count");
+          if (expertsEl && stats.active_experts !== undefined) {
+            expertsEl.textContent = stats.active_experts;
+          }
+          if (solvedEl && stats.total_solved !== undefined) {
+            solvedEl.textContent = stats.total_solved.toLocaleString();
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load real stats:", e);
       }
+    }
 
-      // Fetch and render real reviews
-      async function loadRecentReviews() {
-        try {
-          const res = await fetch(`${API_BASE}/public/reviews?limit=3`);
-          const reviews = await res.json();
+    // Fetch and render real reviews
+    async function loadRecentReviews() {
+      try {
+        const res = await fetch(`${API_BASE}/public/reviews?limit=3`);
+        const reviews = await res.json();
 
-          const grid = document.getElementById("testimonials-grid");
-          if (reviews && reviews.length > 0) {
-            grid.innerHTML = reviews
-              .map((r) => {
-                const stars = [1, 2, 3, 4, 5]
-                  .map(
-                    (n) =>
-                      `<span style="font-size:18px; color:${n <= r.rating ? "#F59E0B" : "var(--color-gray-300)"}">★</span>`,
-                  )
-                  .join("");
+        const grid = document.getElementById("testimonials-grid");
+        if (reviews && reviews.length > 0) {
+          grid.innerHTML = reviews
+            .map((r) => {
+              const stars = [1, 2, 3, 4, 5]
+                .map(
+                  (n) =>
+                    `<span style="font-size:18px; color:${n <= r.rating ? "#F59E0B" : "var(--color-gray-300)"}">★</span>`,
+                )
+                .join("");
 
-                return `
+              return `
               <div class="testimonial-card reveal" style="opacity: 1; transform: none;">
                 <div style="margin-bottom: 16px;">${stars}</div>
                 <p style="font-style: italic; color: var(--color-gray-700); margin-bottom: 24px;">"${escapeHtml(r.review_text || "Great experience!")}"</p>
@@ -846,25 +732,26 @@
                 </div>
               </div>
             `;
-              })
-              .join("");
-          }
-        } catch (e) {
-          console.error("Failed to load real reviews:", e);
+            })
+            .join("");
         }
+      } catch (e) {
+        console.error("Failed to load real reviews:", e);
       }
+    }
 
-      // Helper function for HTML escaping
-      function escapeHtml(text) {
-        if (!text) return "";
-        const p = document.createElement("p");
-        p.textContent = text;
-        return p.innerHTML;
-      }
+    // Helper function for HTML escaping
+    function escapeHtml(text) {
+      if (!text) return "";
+      const p = document.createElement("p");
+      p.textContent = text;
+      return p.innerHTML;
+    }
 
-      // Call them on load
-      loadRecentReviews();
-      loadStats();
-    </script>
-  </body>
+    // Call them on load
+    loadRecentReviews();
+    loadStats();
+  </script>
+</body>
+
 </html>
