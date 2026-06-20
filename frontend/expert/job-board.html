@@ -135,13 +135,16 @@
     </div>
   </div>
 
+
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
   <script src="/js/runtime-env.js"></script>
-    <script src="/js/runtime-config.js"></script>
-    <script src="/js/api.js"></script>
+  <script src="/js/runtime-config.js"></script>
+  <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/toast.js"></script>
   <script src="/js/utils.js"></script>
+  <script src="/js/chat.js"></script>
   <script src="/js/notifications.js"></script>
   <script src="/js/expert-super-admin-chat-badge.js"></script>
   <script>
@@ -193,8 +196,14 @@
 
       allJobsData = {};
 
+      let totalUnread = 0;
+
       container.innerHTML = jobs.map(job => {
         allJobsData[job._id] = job;
+
+        if (job.unread_chat_count > 0) {
+          totalUnread += job.unread_chat_count;
+        }
 
         let buttonsHtml = '';
         if (currentTab === "available") {
@@ -207,8 +216,9 @@
           if (job.app_status === "Interested") {
             withdrawHtml = `<button class="btn btn-secondary btn-sm" style="color:var(--color-danger); border-color:var(--color-danger);" id="btn-withdraw-${job._id}" onclick="withdrawInterest('${job._id}', this)">Withdraw</button>`;
           }
+          let badgeHtml = job.unread_chat_count > 0 ? `<span class="badge" style="background:var(--color-danger);color:white;margin-left:4px;">${job.unread_chat_count}</span>` : "";
           buttonsHtml = `
-            <button class="btn btn-secondary btn-sm" onclick="openJobDetails('${job._id}')">View Details</button>
+            <button class="btn btn-primary btn-sm" onclick="window.location.href='/expert/task-detail.html?id=${job._id}'">Open Task ${badgeHtml}</button>
             ${withdrawHtml}
           `;
         }
@@ -251,8 +261,19 @@
             ${buttonsHtml}
           </div>
         </div>
+        </div>
       </div>
     `}).join("");
+
+      // Update the tab badge if we are on the applied tab
+      const appliedTab = document.getElementById("tab-applied");
+      if (appliedTab) {
+        if (totalUnread > 0) {
+          appliedTab.innerHTML = `Applied Jobs <span class="badge" style="background:var(--color-danger);color:white;margin-left:4px;font-size:11px;padding:2px 6px;">${totalUnread}</span>`;
+        } else {
+          appliedTab.innerHTML = `Applied Jobs`;
+        }
+      }
     }
 
     async function switchTab(tab) {
@@ -299,34 +320,16 @@
           btn.textContent = "✓ Interested";
           btn.style.background = "var(--color-success)";
           btn.style.boxShadow = "none";
-          toast("Interest registered! Admin will be notified.");
-
-          // Remove from available list after a delay if we are in available tab
-          if (currentTab === "available") {
-            setTimeout(() => {
-              const card = document.getElementById(`job-${questionId}`);
-              if (card) {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(-10px)';
-                card.style.transition = 'all 0.4s ease';
-                setTimeout(() => {
-                  card.remove();
-                  document.getElementById('job-details-modal').classList.remove('active');
-                }, 400);
-              }
-            }, 800);
-          } else {
-            loadJobs();
-            document.getElementById('job-details-modal').classList.remove('active');
-          }
+          toast("Interest registered. Opening chat...");
+          window.location.href = `/expert/task-detail.html?id=${encodeURIComponent(questionId)}`;
         } else {
           btn.disabled = false;
-          btn.textContent = "I'm Interested";
+          btn.textContent = "Request for assign";
           toast("Something went wrong. Try again.", "error");
         }
       } catch (e) {
         btn.disabled = false;
-        btn.textContent = "I'm Interested";
+        btn.textContent = "Request for assign";
         toast("Something went wrong. Try again.", "error");
       }
     }
@@ -441,6 +444,8 @@
         toast("Error getting file URL", "error");
       }
     }
+
+
 
     loadJobs();
   </script>

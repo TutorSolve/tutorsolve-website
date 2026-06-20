@@ -76,7 +76,7 @@
             <div class="task-info-strip" style="flex-direction:column;align-items:flex-start;gap:var(--space-3)">
                 <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
                     <div style="display:flex;align-items:center;gap:var(--space-3)">
-                        <a href="/expert/my-tasks.html" class="btn btn-ghost btn-sm">← Back</a>
+                        <a id="back-btn" href="/expert/job-board.html" class="btn btn-ghost btn-sm">← Back</a>
                         <div>
                             <h2 id="task-title" class="page-title" style="font-size:18px"></h2>
                             <div style="display:flex;gap:var(--space-2);margin-top:var(--space-1)" id="task-meta">
@@ -142,7 +142,7 @@
                             <p style="font-size:12px;color:var(--color-gray-500);margin-top:var(--space-1)">
                                 PDF, code files, images accepted
                             </p>
-                            <button class="btn btn-secondary btn-sm" style="margin-top:var(--space-4)"
+                            <button id="upload-btn-trigger" class="btn btn-secondary btn-sm" style="margin-top:var(--space-4)"
                                 onclick="event.stopPropagation();document.getElementById('file-input').click()">
                                 Choose File
                             </button>
@@ -209,6 +209,8 @@
         let currentUserId = null;
         let threadBId = null;
         let currentTaskStatus = null;
+        let isTaskAssigned = false;
+        let isAssignedToOther = false;
 
         // ── Chat ─────────────────────────────────────────────────
         function handleSend() {
@@ -235,13 +237,19 @@
         uploadZone.addEventListener("drop", e => {
             e.preventDefault();
             uploadZone.classList.remove("drag-over");
+            if (!isTaskAssigned) return;
             if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
         });
         fileInput.addEventListener("change", () => {
+            if (!isTaskAssigned) return;
             if (fileInput.files[0]) uploadFile(fileInput.files[0]);
         });
 
         async function uploadFile(file) {
+            if (!isTaskAssigned) {
+                toast("You cannot upload files to an unassigned task.", "error");
+                return;
+            }
             const wrap = document.getElementById("upload-progress-wrap");
             const bar = document.getElementById("upload-bar");
             const pct = document.getElementById("upload-pct");
@@ -290,6 +298,13 @@
                 }
                 const task = await taskRes.json();
                 currentTaskStatus = task.status;
+                isTaskAssigned = task.is_assigned;
+                isAssignedToOther = task.is_assigned_to_other || false;
+
+                // Update back button based on assignment status
+                if (isTaskAssigned) {
+                    document.getElementById("back-btn").href = "/expert/my-tasks.html";
+                }
 
                 document.getElementById("task-title").textContent = task.title;
                 document.getElementById("task-domain").textContent = task.domain;
@@ -301,19 +316,45 @@
                 const btnAction = document.getElementById("submit-action");
                 const btn = document.getElementById("submit-btn");
 
-                if (["in_progress", "advance_paid"].includes(task.status)) {
-                    btnAction.style.display = "block";
-                    btn.disabled = false;
-                    btn.textContent = "✓ Mark as Done & Submit";
-                } else if (task.status === "reviewing") {
-                    btnAction.style.display = "block";
-                    btn.disabled = false;
-                    btn.textContent = "↻ Re-submit & Notify Admin";
+                if (isTaskAssigned) {
+                    if (["in_progress", "advance_paid"].includes(task.status)) {
+                        btnAction.style.display = "block";
+                        btn.disabled = false;
+                        btn.textContent = "✓ Mark as Done & Submit";
+                    } else if (task.status === "reviewing") {
+                        btnAction.style.display = "block";
+                        btn.disabled = false;
+                        btn.textContent = "↻ Re-submit & Notify Admin";
+                    } else {
+                        btnAction.style.display = "none";
+                    }
+                    uploadZone.style.display = "flex";
                 } else {
                     btnAction.style.display = "none";
+                    uploadZone.style.display = "none";
+
+                    // Contextual message: awaiting assignment vs. assigned to someone else
+                    const noticeMsg = isAssignedToOther
+                        ? `<p style="font-weight:600;color:var(--color-gray-700);margin-bottom:8px;">This task has been assigned to another expert.</p>
+                           <p style="font-size:13px;">You can still chat with the admin using the panel on the left.</p>`
+                        : `<p style="font-weight:600;color:var(--color-gray-700);margin-bottom:8px;">You haven't been assigned yet.</p>
+                           <p style="font-size:13px;">Chat with the admin on the left to discuss and get assigned.</p>`;
+
+                    document.getElementById("uploaded-files").innerHTML = `
+                        <div style="padding:var(--space-6); text-align:center; color:var(--color-gray-500);
+                                    border:2px dashed var(--color-gray-200); border-radius:var(--radius-lg);
+                                    margin-top:var(--space-4);">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="1.5" style="margin:0 auto 12px;color:var(--color-gray-300)">
+                                <path d="M8 12h8M12 8v8"/>
+                                <circle cx="12" cy="12" r="10"/>
+                            </svg>
+                            ${noticeMsg}
+                        </div>
+                    `;
                 }
 
-                // Thread B
+                // Thread B or Thread N
                 const threadRes = await apiFetch(`/expert/tasks/${qid}/thread`);
                 if (threadRes.ok) {
                     const t = await threadRes.json();
@@ -368,6 +409,8 @@
 
                 // --- Render expert's own solution files in the upload panel ---
                 const el = document.getElementById("uploaded-files");
+                if (!isTaskAssigned) return;
+
                 if (!solutionFiles.length) {
                     el.innerHTML = `<p style="font-size:13px;color:var(--color-gray-500)">No solution files uploaded yet.</p>`;
                     return;

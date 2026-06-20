@@ -323,15 +323,26 @@ def applied_jobs():
     for q in questions:
         # Determine specific application status
         app_status = "Interested"
+        unread_count = 0
         if q.get("assigned_expert_id"):
             if q["assigned_expert_id"] == expert["_id"]:
                 app_status = "Assigned to You"
+                # Check Thread B
+                thread = db.threads.find_one({"question_id": q["_id"], "thread_type": "B", "expert_id": expert["_id"]})
+                if thread:
+                    unread_count = _count_expert_unread_messages(db, thread, expert["user_id"])
             else:
                 app_status = "Assigned to Someone Else"
         elif q["status"] == "cancelled":
             app_status = "Cancelled"
         elif q["status"] != "awaiting_quote":
             app_status = "In Review"
+
+        if app_status in ["Interested", "Assigned to Someone Else", "Cancelled"]:
+            # Check Thread N
+            thread = db.threads.find_one({"question_id": q["_id"], "thread_type": "N", "expert_id": expert["_id"]})
+            if thread:
+                unread_count = _count_expert_unread_messages(db, thread, expert["user_id"])
 
         result.append({
             "_id":          str(q["_id"]),
@@ -346,7 +357,8 @@ def applied_jobs():
             "created_at":   str(q["created_at"]),
             "status":       q["status"],
             "app_status":   app_status,
-            "files_count":  counts_map.get(q["_id"], 0)
+            "files_count":  counts_map.get(q["_id"], 0),
+            "unread_chat_count": unread_count
         })
     return jsonify(result), 200
 
@@ -434,19 +446,80 @@ def get_thread(question_id):
     db     = get_db()
     expert = db.experts.find_one({"user_id": oid(uid)})
 
-    # Verify the expert is still assigned to this question
     question = db.questions.find_one({"_id": oid(question_id)})
-    if not question or question.get("assigned_expert_id") != expert["_id"]:
-        return jsonify({"error": "You are not assigned to this task"}), 403
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
 
+    is_assigned = question.get("assigned_expert_id") == expert["_id"]
+    is_interested = expert["_id"] in question.get("interested_expert_ids", [])
+    
+    if not is_assigned and not is_interested:
+        return jsonify({"error": "You are not assigned or interested in this task"}), 403
+
+    if is_assigned:
+        thread = db.threads.find_one({
+            "question_id": oid(question_id),
+            "thread_type": "B",
+            "expert_id":   expert["_id"]
+        })
+        if not thread:
+            return jsonify({"error": "Thread not found"}), 404
+        return jsonify({"thread_id": str(thread["_id"])}), 200
+
+    # If only interested, look for or create Thread N
     thread = db.threads.find_one({
         "question_id": oid(question_id),
-        "thread_type": "B",
+        "thread_type": "N",
         "expert_id":   expert["_id"]
     })
+    
     if not thread:
-        return jsonify({"error": "Thread not found"}), 404
-    return jsonify({"thread_id": str(thread["_id"])}), 200
+        employee_id = question.get("assigned_employee_id")
+        from datetime import datetime
+        thread_id = db.threads.insert_one({
+            "question_id": oid(question_id),
+            "thread_type": "N",
+            "student_id": None,
+            "expert_id": expert["_id"],
+            "employee_id": employee_id,
+            "created_at": datetime.utcnow()
+        }).inserted_id
+    else:
+        thread_id = thread["_id"]
+
+    return jsonify({"thread_id": str(thread_id)}), 200
+
+
+@expert_bp.route("/jobs/<question_id>/negotiation", methods=["GET"])
+@expert_required
+def get_negotiation_thread(question_id):
+    uid = get_jwt_identity()
+    db = get_db()
+    expert = db.experts.find_one({"user_id": oid(uid)})
+
+    question = db.questions.find_one({"_id": oid(question_id)})
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+
+    # Ensure expert is in the interested list or already assigned
+    is_interested = expert["_id"] in question.get("interested_expert_ids", [])
+    is_assigned = question.get("assigned_expert_id") == expert["_id"]
+    if not is_interested and not is_assigned:
+        return jsonify({"error": "You are not interested in this order."}), 403
+
+    # Find Thread N for this expert and question
+    thread_n = db.threads.find_one({
+        "question_id": oid(question_id),
+        "thread_type": "N",
+        "expert_id": expert["_id"]
+    })
+
+    if not thread_n:
+        return jsonify({"error": "Negotiation thread not yet created by admin."}), 404
+
+    return jsonify({"thread_id": str(thread_n["_id"])}), 200
+
+
 
 
 @expert_bp.route("/super-admin-chat/thread", methods=["GET"])
@@ -551,12 +624,17 @@ def task_detail(question_id):
     uid    = get_jwt_identity()
     db     = get_db()
     expert = db.experts.find_one({"user_id": oid(uid)})
-    question = db.questions.find_one({
-        "_id":                oid(question_id),
-        "assigned_expert_id": expert["_id"]
-    })
+    question = db.questions.find_one({"_id": oid(question_id)})
     if not question:
         return jsonify({"error": "Not found"}), 404
+
+    is_assigned = question.get("assigned_expert_id") == expert["_id"]
+    is_interested = expert["_id"] in question.get("interested_expert_ids", [])
+    # True when the task has an assigned expert but it's not this one
+    is_assigned_to_other = bool(question.get("assigned_expert_id")) and not is_assigned
+    
+    if not is_assigned and not is_interested:
+        return jsonify({"error": "You are not assigned or interested in this task"}), 403
 
     domain_name = _resolve_domain_name(
         db,
@@ -565,14 +643,16 @@ def task_detail(question_id):
     )
 
     return jsonify({
-        "_id":          str(question["_id"]),
-        "title":        question["title"],
-        "description":  question.get("description"),
-        "domain":       domain_name,
-        "deadline":     str(question["deadline"]) if question.get("deadline") else None,
-        "status":       question["status"],
-        "expert_payout": question.get("expert_payout"),
-        "expert_currency": question.get("expert_currency", "inr"),
+        "_id":                  str(question["_id"]),
+        "title":                question["title"],
+        "description":          question.get("description"),
+        "domain":               domain_name,
+        "deadline":             str(question["deadline"]) if question.get("deadline") else None,
+        "status":               question["status"],
+        "expert_payout":        question.get("expert_payout"),
+        "expert_currency":      question.get("expert_currency", "inr"),
+        "is_assigned":          is_assigned,
+        "is_assigned_to_other": is_assigned_to_other,
     }), 200
 
 @expert_bp.route("/tasks/<question_id>/submit", methods=["POST"])

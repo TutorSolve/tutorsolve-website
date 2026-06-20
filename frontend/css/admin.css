@@ -130,46 +130,59 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+    gap: var(--space-4);
+    padding: var(--space-4);
 }
 
 .cockpit-split {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    flex: 1;
-    gap: 0;
-    overflow: hidden;
-    border-bottom: 1px solid var(--color-gray-300);
+    flex: 0 0 clamp(260px, 34vh, 340px);
+    gap: var(--space-4);
+    overflow: visible;
+    border-bottom: 0;
+    min-height: 50vh;
 }
 
 .chat-panel {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-right: 1px solid var(--color-gray-300);
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+    min-width: 0;
+    min-height: 0;
 }
 
 .chat-panel:last-child {
-    border-right: none;
+    border-right: 1px solid var(--color-gray-200);
 }
 
 .chat-panel-header {
-    padding: 8px var(--space-4);
-    background: var(--color-gray-50);
+    padding: 10px var(--space-4);
+    background: var(--color-white);
     border-bottom: 1px solid var(--color-gray-100);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: .03em;
     text-transform: uppercase;
     color: var(--color-gray-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .chat-panel--student .chat-panel-header {
-    background: var(--brand-primary-ultra);
+    background: linear-gradient(180deg, var(--brand-primary-ultra), var(--color-white));
     color: var(--brand-primary);
 }
 
 .chat-panel--expert .chat-panel-header {
-    background: var(--color-warning-bg);
+    background: linear-gradient(180deg, var(--color-warning-bg), var(--color-white));
     color: #92400E;
 }
 
@@ -257,6 +270,7 @@
 .star-btn:hover {
     color: #F59E0B;
 }
+
 /* ── Workflow Stepper ────────────────────────────────────── */
 .workflow-stepper {
     display: flex;
@@ -284,7 +298,6 @@
 
 .workflow-step:hover {
     box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
 }
 
 .workflow-step-header {
@@ -353,6 +366,16 @@
     box-shadow: 0 0 8px rgba(6, 95, 70, 0.2);
 }
 
+.workflow-step.done.workflow-step--editable {
+    opacity: 1;
+    border-color: var(--color-gray-200);
+}
+
+.workflow-step.done.workflow-step--editable .workflow-step-header {
+    color: var(--color-gray-800);
+    background: linear-gradient(to right, #F0FDF4, var(--color-white));
+}
+
 .workflow-step.locked {
     opacity: 0.5;
     pointer-events: none;
@@ -367,10 +390,12 @@
     border-radius: var(--radius-sm);
     border-left: 3px solid var(--color-gray-300);
 }
+
 .workflow-step.done .workflow-step-summary {
     border-left-color: var(--color-success-text);
     background: #F0FDF4;
 }
+
 .workflow-step.active .workflow-step-summary {
     border-left-color: var(--brand-primary);
     background: var(--brand-primary-ultra);
@@ -517,4 +542,453 @@
     .admin-sa-chat-input-row .btn {
         width: 100%;
     }
+}
+
+/* ── Roadmap Split Layout ──────────────────────────────────── */
+.roadmap-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    flex: 1;
+    min-height: 0;
+    gap: var(--space-4);
+    overflow: visible;
+}
+
+.roadmap-left {
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+    padding: var(--space-5);
+    min-width: 0;
+}
+
+/* Remove double-padding since roadmap-left already pads */
+.roadmap-left .workflow-stepper {
+    padding: 0;
+    margin-top: var(--space-2);
+}
+
+.roadmap-left .workflow-step {
+    box-shadow: none;
+    border-color: var(--color-gray-100);
+}
+
+.roadmap-left .workflow-step:hover {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.roadmap-left .workflow-step.active {
+    box-shadow: 0 0 0 1px var(--brand-primary-light);
+}
+
+.roadmap-right {
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+    min-width: 0;
+    min-height: 0;
+}
+
+.roadmap-experts-sidebar {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+
+.roadmap-right-header {
+    padding: 10px var(--space-4);
+    border-bottom: 1px solid var(--color-gray-100);
+    background: var(--color-white);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+.roadmap-card-refresh {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    background: var(--color-white);
+    color: var(--color-gray-500);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.roadmap-card-refresh:hover {
+    background: var(--brand-primary-ultra);
+    border-color: var(--brand-primary-light);
+    color: var(--brand-primary);
+}
+
+.roadmap-experts-list {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.roadmap-expert-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-gray-50);
+    transition: background 0.12s ease;
+}
+
+.roadmap-expert-card:last-child {
+    border-bottom: none;
+}
+
+.roadmap-expert-card:hover {
+    background: var(--color-gray-50);
+}
+
+.roadmap-expert-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.roadmap-expert-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.roadmap-expert-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+.roadmap-expert-unread-badge {
+    min-width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--color-danger);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    flex-shrink: 0;
+}
+
+.roadmap-expert-actions .btn {
+    font-size: 11px;
+    padding: 5px 8px;
+    white-space: nowrap;
+}
+
+.roadmap-reviews-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+}
+
+.roadmap-reviews-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.roadmap-reviews-modal-inner {
+    background: #fff;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    padding: 32px;
+    border-radius: 16px;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.roadmap-reviews-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    color: #9ca3af;
+    line-height: 1;
+}
+
+.expert-modal-details {
+    display: grid;
+    gap: var(--space-4);
+    padding: 0 0 var(--space-5);
+}
+
+.expert-detail-block {
+    background: var(--color-gray-50);
+    border: 1px solid var(--color-gray-100);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+}
+
+.expert-detail-block h4 {
+    margin: 0 0 var(--space-2);
+    font-size: 13px;
+    color: var(--color-gray-900);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.expert-detail-block p {
+    margin: 0;
+    color: var(--color-gray-700);
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+#roadmap-modal-reviews-list {
+    flex: 1;
+    overflow-y: auto;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-300) transparent;
+}
+
+#roadmap-modal-reviews-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#roadmap-modal-reviews-list::-webkit-scrollbar-thumb {
+    background-color: var(--color-gray-300);
+    border-radius: 10px;
+}
+
+.review-item {
+    padding: var(--space-5) 0;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.review-item-text {
+    margin-top: var(--space-3);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--color-gray-700);
+    font-style: italic;
+    background: var(--color-gray-50);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+}
+
+@media (max-width: 1100px) {
+    .dashboard-layout {
+        display: grid !important;
+        grid-template-columns: 72px minmax(0, 1fr);
+    }
+
+    .sidebar {
+        width: 72px;
+        min-width: 72px;
+        padding: var(--space-4) 0;
+    }
+
+    .sidebar-logo,
+    .sidebar-section-label,
+    .sidebar-item span:not(.sa-admin-chat-unread-badge),
+    .navbar-logo-text,
+    .sidebar-footer .sidebar-item {
+        overflow: hidden;
+    }
+
+    .sidebar-logo {
+        justify-content: center;
+        padding-inline: 0;
+    }
+
+    .sidebar-logo .navbar-logo-text,
+    .sidebar-section-label {
+        display: none;
+    }
+
+    .sidebar-item {
+        justify-content: center;
+        padding-inline: 0;
+        gap: 0;
+    }
+
+    .sidebar-item .sidebar-icon {
+        flex: 0 0 20px;
+    }
+
+    .sa-admin-chat-unread-badge {
+        position: absolute;
+        transform: translate(12px, -10px);
+    }
+
+    .cockpit-split {
+        flex-basis: clamp(260px, 32vh, 320px);
+    }
+
+    .roadmap-split {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(360px, 1fr) minmax(210px, 34vh);
+    }
+
+    .roadmap-left {
+        padding: var(--space-4);
+    }
+
+    .roadmap-right {
+        min-height: 0;
+    }
+
+    .roadmap-experts-list {
+        display: grid;
+        align-content: start;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .roadmap-expert-card:last-child {
+        border-bottom: 1px solid var(--color-gray-50);
+    }
+}
+
+@media (max-width: 760px) {
+    .dashboard-layout {
+        display: block !important;
+        height: auto !important;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: visible !important;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .cockpit-main {
+        min-height: 100vh;
+        min-height: 100dvh;
+        gap: var(--space-3);
+        padding: var(--space-3);
+        overflow: visible !important;
+    }
+
+    .cockpit-split {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(300px, 42vh) minmax(300px, 42vh);
+        flex: none;
+        height: auto;
+        overflow: visible;
+        border-bottom: 0;
+    }
+
+    .chat-panel {
+        min-height: 300px;
+    }
+
+    .chat-panel:last-child {
+        border-right: 1px solid var(--color-gray-200);
+    }
+
+    .roadmap-split {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(420px, auto) minmax(260px, auto);
+        flex: none;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .roadmap-left,
+    .roadmap-right,
+    .roadmap-experts-list {
+        overflow: visible;
+    }
+
+    .roadmap-left {
+        padding: var(--space-3);
+    }
+
+    .roadmap-experts-list {
+        display: block;
+    }
+}
+
+@media (max-width: 520px) {
+    .roadmap-expert-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .roadmap-expert-actions {
+        width: 100%;
+    }
+
+    .roadmap-expert-actions .btn {
+        flex: 1;
+    }
+
+    .roadmap-reviews-modal {
+        padding: var(--space-3);
+    }
+
+    .roadmap-reviews-modal-inner {
+        padding: var(--space-5);
+        border-radius: var(--radius-lg);
+    }
+
+    .chat-input-row {
+        flex-direction: column;
+    }
+
+    .chat-input-row .btn {
+        width: 100%;
+    }
+}
+
+
+.roadmap-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+    text-align: center;
+    color: var(--color-gray-500);
+    font-size: 13px;
+    height: 100%;
+    min-height: 80px;
+    gap: var(--space-2);
 }

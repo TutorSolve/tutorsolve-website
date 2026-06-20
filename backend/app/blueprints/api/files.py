@@ -154,6 +154,17 @@ def get_file_url(file_id):
     uploader_role = file.get("uploader_role", "expert")
     is_solution   = uploader_role == "expert"
 
+    if not is_solution and role == Role.EXPERT:
+        expert_p = db.experts.find_one({"user_id": oid(uid)})
+        can_view_question = bool(
+            expert_p and question and (
+                question.get("assigned_expert_id") == expert_p["_id"]
+                or expert_p["_id"] in question.get("interested_expert_ids", [])
+            )
+        )
+        if not can_view_question:
+            return jsonify({"error": "Access denied. You are not assigned or interested in this task."}), 403
+
     if is_solution:
         if role == Role.STUDENT and not file.get("forwarded_at"):
             return jsonify({"error": "Access denied. File not shared with student yet."}), 403
@@ -219,6 +230,18 @@ def get_files_for_question(question_id):
     question = db.questions.find_one({"_id": oid(question_id)})
     if not question:
         return jsonify({"error": "Question not found"}), 404
+
+    expert_profile = None
+    if role == Role.EXPERT:
+        expert_profile = db.experts.find_one({"user_id": oid(uid)})
+        can_view_question = bool(
+            expert_profile and (
+                question.get("assigned_expert_id") == expert_profile["_id"]
+                or expert_profile["_id"] in question.get("interested_expert_ids", [])
+            )
+        )
+        if not can_view_question:
+            return jsonify({"error": "Access denied. You are not assigned or interested in this task."}), 403
         
     files = list(db.files.find({"question_id": oid(question_id)}))
     
@@ -240,12 +263,11 @@ def get_files_for_question(question_id):
                     visible = True
                     
         elif role == Role.EXPERT:
-            expert_p = db.experts.find_one({"user_id": oid(uid)})
             # Expert sees all student files
             if not is_solution:
                 visible = True
             # Expert sees their OWN solution files
-            elif expert_p and str(f.get("expert_id")) == str(expert_p["_id"]):
+            elif expert_profile and str(f.get("expert_id")) == str(expert_profile["_id"]):
                 visible = True
                 
         elif role == Role.STUDENT:

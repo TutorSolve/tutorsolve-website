@@ -76,13 +76,16 @@ function _connect(onConnected) {
     if (indicator) indicator.textContent = "Reconnecting…";
   });
 
-  _socket.on("new_notification", (data) => {
+  function handleNotification(data) {
     if (typeof _onNotification === "function") {
       _onNotification(data);
     } else {
       _handleDefaultNotification(data);
     }
-  });
+  }
+
+  _socket.on("new_notification", handleNotification);
+  _socket.on("notification", handleNotification);
 
   _socket.on("disconnect", () => {
     const indicator = document.getElementById("chat-status");
@@ -178,12 +181,28 @@ function initExpertChat(threadId, userId, containerId = "chat-messages") {
   });
 }
 
+let _dynamicRouteMap = {};
+
+function addDynamicThreadRoute(threadId, containerId, userId) {
+  _dynamicRouteMap[threadId] = containerId;
+  _currentUserId = userId || _currentUserId;
+  
+  if (_socket) {
+    _socket.emit("join_thread", { thread_id: threadId, token: getToken() });
+    _socket.off(`message_history_${threadId}`);
+    _socket.on(`message_history_${threadId}`, (messages) => {
+      _renderHistory(messages, containerId, _currentUserId);
+    });
+  }
+}
+
 function initAdminChat(
   threadAId,
   threadBId,
   userId,
   containerAId = "chat-a",
   containerBId = "chat-b",
+  extraContainerBId = null,
 ) {
   _currentUserId = userId;
 
@@ -209,14 +228,20 @@ function initAdminChat(
     if (threadBId) {
       socket.on(`message_history_${threadBId}`, (messages) => {
         _renderHistory(messages, containerBId, userId);
+        if (extraContainerBId) _renderHistory(messages, extraContainerBId, userId);
       });
     }
 
     socket.on("new_message", (msg) => {
-      const cid = routeMap[msg.thread_id];
+      let cid = routeMap[msg.thread_id] || _dynamicRouteMap[msg.thread_id];
       if (cid) {
         _renderBubble(msg, cid, userId);
         _scrollBottom(cid);
+      }
+      // Mirror thread-B messages to the roadmap expert-chat panel
+      if (extraContainerBId && threadBId && msg.thread_id === threadBId) {
+        _renderBubble(msg, extraContainerBId, userId);
+        _scrollBottom(extraContainerBId);
       }
     });
   });

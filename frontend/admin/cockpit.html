@@ -106,11 +106,47 @@
         </div>
       </div>
 
-      <!-- ORDER CONTROLS PANEL -->
-      <div class="order-controls-panel">
-        <div class="order-controls-inner" id="order-controls">
-          <div style="padding: 24px; color: var(--color-gray-500); width: 100%; text-align: center;">
-            No order selected. Please open an order from the Orders list.
+      <!-- ROADMAP SPLIT: Left = Roadmap Cards, Right = Expert Chat -->
+      <div class="roadmap-split">
+        <!-- LEFT: Order Info + Roadmap Steps -->
+        <div class="roadmap-left">
+          <div id="roadmap-left-content">
+            <div class="roadmap-empty-state">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                style="color: var(--color-gray-300); margin-bottom: 4px;">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              <p>No order selected. Please open an order from the Orders list.</p>
+            </div>
+          </div>
+        </div>
+        <!-- RIGHT: Expert Chat Panel -->
+        <div class="roadmap-right">
+          <div class="roadmap-experts-sidebar" style="width: 100%;">
+            <div class="roadmap-right-header">
+              <span style="display:flex;align-items:center;gap:var(--space-2);min-width:0;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Interested Experts
+              </span>
+              <button class="roadmap-card-refresh" onclick="refreshInterestedExperts()" title="Refresh interested experts" aria-label="Refresh interested experts">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+              </button>
+            </div>
+            <div id="roadmap-experts-panel" class="roadmap-experts-list">
+              <div style="padding: 18px 16px; text-align: center; color: var(--color-gray-400); font-size: 13px;">
+                Select an order to view experts.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -119,8 +155,8 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
   <script src="/js/runtime-env.js"></script>
-    <script src="/js/runtime-config.js"></script>
-    <script src="/js/api.js"></script>
+  <script src="/js/runtime-config.js"></script>
+  <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/toast.js"></script>
   <script src="/js/utils.js"></script>
@@ -134,6 +170,13 @@
     const qid = new URLSearchParams(window.location.search).get("id");
     let currentUserId = null;
     var activeOrderId = null;
+    let currentRoadmapOrderId = null;
+    let currentRoadmapOrder = null;
+    let roadmapExpertsById = {};
+    let roadmapExpertIdByThreadId = {};
+    let activeRoadmapThreadId = null;
+    let roadmapModalExpertId = null;
+    let roadmapModalPage = 1;
 
     apiFetch("/auth/me").then(r => {
       if (!r || !r.ok) {
@@ -167,6 +210,8 @@
       }
 
       renderOrderControls(order);
+      renderExpertPanel(order);
+      activeRoadmapThreadId = order.thread_b_id ? String(order.thread_b_id) : null;
 
       // Update headers
       document.getElementById("header-student").textContent = `Student: ${order.student_name || 'Unknown'}`;
@@ -224,7 +269,8 @@
       } else {
         document.getElementById("chat-b").innerHTML = `
                 <div class="chat-empty">
-                    <p>No expert assigned yet.</p>
+                    <p style="font-weight: 600;">No expert assigned yet</p>
+                    <p style="font-size: 13px; color: var(--color-gray-500); margin-top: 4px;">Select an interested expert from the list below to negotiate.</p>
                 </div>`;
       }
 
@@ -237,6 +283,7 @@
           "chat-a-messages",
           "chat-b-messages"
         );
+        setNotificationHandler(handleRoadmapChatNotification);
       }
     }
 
@@ -275,8 +322,26 @@
       }
     }
 
+    async function refreshRoadmap(questionId) {
+      const res = await apiFetch(`/admin/orders/${questionId}`);
+      const order = await res.json();
+
+      if (!res.ok) {
+        toast(order.error || "Failed to refresh roadmap", "error");
+        return;
+      }
+
+      if (activeOrderId === questionId) {
+        currentRoadmapOrder = order;
+      }
+
+      renderOrderControls(order);
+      toast("Roadmap refreshed.");
+    }
+
     function renderOrderControls(order) {
-      const panel = document.getElementById("order-controls");
+      const panel = document.getElementById("roadmap-left-content");
+      if (!panel) return;
       panel.innerHTML = renderOrderInfoStrip(order);
 
       if (order.status === "cancelled") {
@@ -299,15 +364,15 @@
         panel.innerHTML += `
           <div style="display:flex; justify-content:flex-end; margin-bottom: var(--space-4);">
             ${isAlreadyRequested
-              ? `<span style="font-size:13px; font-weight:600; color:#92400E; background:#FEF3C7; border:1px solid #FCD34D; padding:6px 14px; border-radius:9999px;">⏳ Refund Requested — Awaiting Super Admin</span>`
-              : `<button class="btn btn-sm" style="color:#dc2626; border:1.5px solid #dc2626; background:#fff; font-weight:500;"
+            ? `<span style="font-size:13px; font-weight:600; color:#92400E; background:#FEF3C7; border:1px solid #FCD34D; padding:6px 14px; border-radius:9999px;">⏳ Refund Requested — Awaiting Super Admin</span>`
+            : `<button class="btn btn-sm" style="color:#dc2626; border:1.5px solid #dc2626; background:#fff; font-weight:500;"
                   onclick="openRefundModal('${order._id}', ${refundableAmount || 0}, '${order.payment?.completion_paid ? "completion" : "advance"}', '${order.payment?.currency || order.student_currency || "inr"}')">⚠️ Initiate Refund</button>`
-            }
+          }
           </div>`;
       }
 
       const step1Done = order.price_approved;
-      const step1Active = !order.price_approved;
+      const step1Active = true;
 
       const advanceBypassed = !!order.payment?.advance_bypassed;
       const step2Done = !!order.payment?.advance_paid || advanceBypassed;
@@ -329,7 +394,7 @@
       let html = `<div class="workflow-stepper">
         <div class="workflow-stepper-header">
             <h3 style="margin: 0; font-size: 16px; color: var(--color-gray-800);">Order Roadmap</h3>
-            <button class="btn btn-ghost btn-sm" onclick="openOrder('${order._id}')" title="Refresh Roadmap">
+            <button class="btn btn-ghost btn-sm" onclick="refreshRoadmap('${order._id}')" title="Refresh Roadmap">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                 </svg>
@@ -339,16 +404,13 @@
 
       // Step 1: Pricing
       html += `
-        <div class="workflow-step ${step1Done ? 'done' : (step1Active ? 'active' : 'locked')}">
+        <div class="workflow-step ${step1Done ? 'done workflow-step--editable' : 'active'}">
             <div class="workflow-step-header">
                 <div class="workflow-step-badge">${step1Done ? '✓' : '1'}</div>
-                Set Prices
+                <span>${step1Done ? 'Prices Set' : 'Set Prices'}</span>
             </div>
             <div class="workflow-step-body">
-                ${!step2Done
-          ? renderPricingSectionInner(order)
-          : `<div class="workflow-step-summary">Approved: ${formatMoney(order.student_price, order.student_currency)} Student / ${formatMoney(order.expert_payout, order.expert_currency)} Expert</div>`
-        }
+                ${renderPricingSectionInner(order)}
             </div>
         </div>
       `;
@@ -447,10 +509,6 @@
 
       html += `</div>`;
       panel.innerHTML += html;
-
-      if (step3Active && document.getElementById("interested-list")) {
-        loadInterestedExperts(order._id);
-      }
     }
 
     function renderOrderInfoStrip(order) {
@@ -498,14 +556,26 @@
     }
 
     function renderPricingSectionInner(order) {
-      const buttonText = order.student_price ? "Update Price Quote" : "Set Price Quote";
+      const paymentStarted = !!(order.payment?.advance_paid || order.payment?.completion_paid || order.payment?.advance_bypassed);
+      const hasQuote = !!order.student_price;
+      const buttonText = paymentStarted ? "Update Expert Payout" : (hasQuote ? "Update Price Quote" : "Set Price Quote");
+      const helperText = paymentStarted
+        ? "Student price is locked because payment has started. Expert payout can still be updated."
+        : (hasQuote ? "You can adjust the student quote or expert payout before advance payment starts." : "Set the student quote and expert payout to unlock payment.");
       return `
+            ${hasQuote ? `
+              <div class="workflow-step-summary" style="margin-bottom:var(--space-3); display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:center; justify-content:space-between;">
+                <span>Student: <strong>${formatMoney(order.student_price, order.student_currency)}</strong></span>
+                <span>Expert: <strong>${formatMoney(order.expert_payout, order.expert_currency)}</strong></span>
+              </div>
+            ` : ''}
+            <p style="font-size:12px; color:var(--color-gray-500); margin:0 0 var(--space-3); line-height:1.5;">${helperText}</p>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:var(--space-4); margin-bottom:var(--space-4)">
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="label">Student Price</label>
                     <div style="display:flex; gap:8px;">
-                      <input id="student-price" type="number" class="input" step="0.01" min="0" value="${order.student_price || ""}" style="flex:1; min-width:0;">
-                      <select id="student-currency" class="input" style="width:92px;">
+                      <input id="student-price" type="number" class="input" step="0.01" min="0" value="${order.student_price || ""}" ${paymentStarted ? "disabled" : ""} style="flex:1; min-width:0;">
+                      <select id="student-currency" class="input" ${paymentStarted ? "disabled" : ""} style="width:92px;">
                         ${renderCurrencyOptions(order.student_currency)}
                       </select>
                     </div>
@@ -602,11 +672,7 @@
 
     function renderAssignmentSectionInner(order) {
       return `
-            <p class="label" style="margin-bottom:var(--space-3)">Interested Experts</p>
-            <div id="interested-list">
-                <p style="font-size:13px;color:var(--color-gray-500)">Loading...</p>
-            </div>
-            <p class="label" style="margin-top:var(--space-5);margin-bottom:var(--space-3)">
+            <p class="label" style="margin-bottom:var(--space-3)">
                 Search by Expert ID or Name
             </p>
             <div style="display:flex;gap:var(--space-3)">
@@ -618,30 +684,7 @@
       `;
     }
 
-    async function loadInterestedExperts(questionId) {
-      const res = await apiFetch(`/admin/orders/${questionId}/interested-experts`);
-      const experts = await res.json();
-      const list = document.getElementById("interested-list");
 
-      if (experts.length === 0) {
-        list.innerHTML = `<p style="font-size:13px;color:var(--color-gray-500)">No experts have expressed interest yet.</p>`;
-        return;
-      }
-
-      list.innerHTML = experts.map(e => `
-            <div class="expert-card">
-                <div>
-                    <p style="font-weight:500;font-size:14px">${e.name}</p>
-                    <p style="font-size:12px;color:var(--color-gray-500)">
-                        ${e.domain} · ⭐ ${e.quality_score}/5 · ${e.tasks_completed} tasks
-                    </p>
-                </div>
-                <button class="btn btn-primary btn-sm" onclick="assignExpert('${questionId}', '${e._id}')">
-                    Assign
-                </button>
-            </div>
-        `).join("");
-    }
 
     let searchTimeout = null;
     async function searchExperts(query, domain) {
@@ -652,6 +695,9 @@
       searchTimeout = setTimeout(async () => {
         const res = await apiFetch(`/admin/experts/search?q=${encodeURIComponent(query)}&domain=${domain}`);
         const experts = await res.json();
+        experts.forEach(expert => {
+          roadmapExpertsById[expert._id] = expert;
+        });
         const results = document.getElementById("expert-search-results");
 
         results.innerHTML = experts.map(e => `
@@ -671,11 +717,43 @@
     }
 
     async function assignExpert(questionId, expertId) {
+      const assignedExpertId = currentRoadmapOrder && currentRoadmapOrder._id === questionId
+        ? currentRoadmapOrder.assigned_expert_id
+        : null;
+
+      if (assignedExpertId === expertId) {
+        toast("This expert is already assigned.");
+        return;
+      }
+
+      if (assignedExpertId) {
+        const nextExpert = roadmapExpertsById[expertId];
+        const currentExpert = roadmapExpertsById[assignedExpertId];
+        const confirmed = await showConfirmModal({
+          title: "Replace Assigned Expert",
+          message: `Remove ${currentExpert?.name || currentRoadmapOrder?.expert_name || "the current expert"} and assign ${nextExpert?.name || "this expert"} instead? The previous expert will be moved back to negotiation.`,
+          confirmText: "Replace Expert",
+          cancelText: "Cancel",
+          isDanger: true
+        });
+        if (!confirmed) return;
+
+        const removeRes = await apiFetch(`/admin/orders/${questionId}/assign`, { method: "DELETE" });
+        if (!removeRes.ok) {
+          const d = await removeRes.json();
+          toast(d.error || "Failed to remove current expert", "error");
+          return;
+        }
+      }
+
       const res = await apiFetch(`/admin/orders/${questionId}/assign`, {
         method: "POST", body: JSON.stringify({ expert_id: expertId })
       });
 
-      if (res.ok) { toast("Expert assigned."); openOrder(questionId); }
+      if (res.ok) {
+        toast(assignedExpertId ? "Expert replaced." : "Expert assigned.");
+        openOrder(questionId);
+      }
       else { const d = await res.json(); toast(d.error || "Failed", "error"); }
     }
 
@@ -819,6 +897,353 @@
     }
 
 
+    // ── Roadmap Expert Panel ─────────────────────────────────────────
+    function renderExpertPanel(order) {
+      const expertsPanel = document.getElementById("roadmap-experts-panel");
+      if (!expertsPanel) return;
+
+      currentRoadmapOrderId = order._id;
+      currentRoadmapOrder = order;
+
+      if (!order.assigned_employee_id) {
+        expertsPanel.innerHTML = `<div style="padding:16px; text-align:center; font-size:13px; color:var(--color-gray-500);">Claim this order to view experts.</div>`;
+        return;
+      }
+
+      loadRoadmapExpertsList(order._id, order);
+    }
+
+    async function refreshInterestedExperts() {
+      if (!currentRoadmapOrderId || !currentRoadmapOrder) {
+        toast("Open an order first.", "error");
+        return;
+      }
+
+      await loadRoadmapExpertsList(currentRoadmapOrderId, currentRoadmapOrder);
+      toast("Interested experts refreshed.");
+    }
+
+    function clearRoadmapExpertUnread(expertId) {
+      if (roadmapExpertsById[expertId]) {
+        roadmapExpertsById[expertId].unread_count = 0;
+      }
+
+      document
+        .querySelectorAll(`[data-expert-unread="${expertId}"]`)
+        .forEach((badge) => badge.remove());
+    }
+
+    function upsertRoadmapExpertUnread(expertId, count) {
+      const expert = roadmapExpertsById[expertId];
+      const actions = document.querySelector(`[data-expert-actions="${expertId}"]`);
+      if (!expert || !actions) return;
+
+      expert.unread_count = count;
+      let badge = actions.querySelector(`[data-expert-unread="${expertId}"]`);
+
+      if (count <= 0) {
+        if (badge) badge.remove();
+        return;
+      }
+
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "roadmap-expert-unread-badge";
+        badge.dataset.expertUnread = expertId;
+        actions.prepend(badge);
+      }
+
+      badge.textContent = count;
+    }
+
+    function handleRoadmapChatNotification(data) {
+      if (!data || data.type !== "new_message" || !data.thread_id) return;
+
+      const threadId = String(data.thread_id);
+      if (threadId === activeRoadmapThreadId) {
+        return;
+      }
+
+      const expertId = roadmapExpertIdByThreadId[threadId];
+      if (!expertId) {
+        if (currentRoadmapOrderId && currentRoadmapOrder) {
+          loadRoadmapExpertsList(currentRoadmapOrderId, currentRoadmapOrder);
+        }
+        return;
+      }
+
+      const currentCount = Number(roadmapExpertsById[expertId]?.unread_count || 0);
+      upsertRoadmapExpertUnread(expertId, currentCount + 1);
+    }
+
+    async function openNegotiationChat(questionId, expertId, expertName) {
+      document.getElementById("header-expert").textContent = `Negotiating with ${expertName}`;
+
+      const containerB = document.getElementById("chat-b");
+      containerB.innerHTML = `
+        <div class="chat-empty">
+          <p>Loading negotiation chat...</p>
+        </div>
+      `;
+
+      try {
+        const res = await apiFetch(`/admin/orders/${questionId}/negotiation/${expertId}`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+
+        setupChatContainer("chat-b", data.thread_id);
+        addDynamicThreadRoute(data.thread_id, "chat-b-messages", currentUserId);
+        activeRoadmapThreadId = String(data.thread_id);
+        roadmapExpertIdByThreadId[activeRoadmapThreadId] = expertId;
+        clearRoadmapExpertUnread(expertId);
+      } catch (err) {
+        containerB.innerHTML = `
+          <div class="chat-empty">
+            <p style="color:var(--color-danger)">Failed to load negotiation chat.</p>
+          </div>
+        `;
+      }
+    }
+
+    function openAssignedExpertChat(threadId, expertName) {
+      document.getElementById("header-expert").textContent = `Expert: ${expertName}`;
+      setupChatContainer("chat-b", threadId);
+      addDynamicThreadRoute(threadId, "chat-b-messages", currentUserId);
+      activeRoadmapThreadId = String(threadId);
+    }
+
+    function renderStarsFull(rating) {
+      return [1, 2, 3, 4, 5]
+        .map((n) => {
+          const filled = n <= Math.round(Number(rating) || 0);
+          return `<span style="font-size:18px; color:${filled ? "#F59E0B" : "var(--color-gray-300)"}">★</span>`;
+        })
+        .join("");
+    }
+
+    async function openRoadmapExpertProfile(expertId) {
+      const expert = roadmapExpertsById[expertId];
+      if (!expert) {
+        toast("Expert profile details are not available.", "error");
+        return;
+      }
+
+      roadmapModalExpertId = expertId;
+      roadmapModalPage = 1;
+
+      const rating = Number(expert.average_rating ?? expert.quality_score ?? 0);
+      const reviewCount = Number(expert.review_count || 0);
+      const displayName = expert.display_name || expert.name || "Expert";
+
+      document.getElementById("roadmap-expert-profile-modal")?.remove();
+      const modal = document.createElement("div");
+      modal.id = "roadmap-expert-profile-modal";
+      modal.className = "roadmap-reviews-modal";
+      modal.innerHTML = `
+        <div class="roadmap-reviews-backdrop" onclick="closeRoadmapExpertProfile()"></div>
+        <div class="reviews-modal-inner roadmap-reviews-modal-inner">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+            <div>
+              <h3 style="font-size:24px;font-weight:700;color:#111827;margin:0;">${escapeHtml(displayName)}</h3>
+              <div style="margin-top:8px">
+                <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
+                  ${renderStarsFull(rating)}
+                  <span style="font-size:14px;color:var(--color-gray-500)">
+                    ${rating.toFixed(1)} / 5 · ${reviewCount} review${reviewCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button onclick="closeRoadmapExpertProfile()" class="roadmap-reviews-close">✕</button>
+          </div>
+          <div class="expert-modal-details">
+            <div class="expert-detail-block">
+              <h4>About Me</h4>
+              <p>${escapeHtml(expert.about_me || "This expert has not added an about me yet.")}</p>
+            </div>
+            <div class="expert-detail-block">
+              <h4>Qualifications</h4>
+              <p>${escapeHtml(expert.qualifications || "This expert has not added qualifications yet.")}</p>
+            </div>
+          </div>
+          <div id="roadmap-modal-reviews-list">
+            <p style="text-align:center;color:var(--color-gray-500);padding:var(--space-8)">Loading...</p>
+          </div>
+          <div id="roadmap-modal-load-more" style="text-align:center;margin-top:16px;display:none">
+            <button class="btn btn-secondary btn-sm" onclick="loadMoreRoadmapExpertReviews()">Load More</button>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:var(--space-3);padding-top:var(--space-4);border-top:1px solid var(--color-gray-100);margin-top:var(--space-4);">
+            <button class="btn btn-secondary" onclick="closeRoadmapExpertProfile()">Close</button>
+            <button class="btn btn-primary" onclick="closeRoadmapExpertProfile(); assignExpert('${currentRoadmapOrderId}', '${expertId}')">Assign</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      document.body.style.overflow = "hidden";
+      await fetchRoadmapExpertReviews(true);
+    }
+
+    function closeRoadmapExpertProfile() {
+      document.getElementById("roadmap-expert-profile-modal")?.remove();
+      document.body.style.overflow = "";
+    }
+
+    async function fetchRoadmapExpertReviews(reset = false) {
+      if (reset) roadmapModalPage = 1;
+
+      const list = document.getElementById("roadmap-modal-reviews-list");
+      const loadMore = document.getElementById("roadmap-modal-load-more");
+      if (!list || !roadmapModalExpertId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/public/experts/${roadmapModalExpertId}/reviews?page=${roadmapModalPage}`);
+        const data = await res.json();
+        const reviews = data.reviews || [];
+
+        if (reset) list.innerHTML = "";
+
+        if (!reviews.length && reset) {
+          list.innerHTML = `
+            <div style="text-align:center;padding:var(--space-10);color:var(--color-gray-500)">
+              <p>No reviews yet.</p>
+            </div>`;
+          if (loadMore) loadMore.style.display = "none";
+          return;
+        }
+
+        reviews.forEach((review) => {
+          const div = document.createElement("div");
+          div.className = "review-item";
+          const starsHtml = [1, 2, 3, 4, 5]
+            .map((n) => `<span style="font-size:16px;color:${n <= review.rating ? "#F59E0B" : "#d1d5db"}">★</span>`)
+            .join("");
+          const reviewTextHtml = review.review_text
+            ? `<div class="review-item-text">${escapeHtml(review.review_text)}</div>`
+            : "";
+          const dateStr = review.created_at
+            ? new Date(review.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+            : "";
+
+          div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;gap:2px;">${starsHtml}</div>
+              <span style="font-size:12px;color:#9ca3af;">${dateStr}</span>
+            </div>
+            ${reviewTextHtml}
+            <p style="font-size:11px;color:#9ca3af;margin-top:var(--space-2);">${escapeHtml(review.domain || "")} question</p>
+          `;
+          list.appendChild(div);
+        });
+
+        if (loadMore) loadMore.style.display = data.has_more ? "block" : "none";
+      } catch (err) {
+        console.error("Failed to load expert reviews", err);
+        list.innerHTML = `<div style="text-align:center;padding:var(--space-8);color:var(--color-gray-500)"><p>Error loading reviews. Please try again.</p></div>`;
+        if (loadMore) loadMore.style.display = "none";
+      }
+    }
+
+    function loadMoreRoadmapExpertReviews() {
+      roadmapModalPage++;
+      fetchRoadmapExpertReviews();
+    }
+
+    async function loadRoadmapExpertsList(questionId, order) {
+      const panel = document.getElementById("roadmap-experts-panel");
+      if (!panel) return;
+
+      panel.innerHTML = `<div style="padding:12px 16px; font-size:12px; color:var(--color-gray-400);">Loading experts…</div>`;
+
+      try {
+        const res = await apiFetch(`/admin/orders/${questionId}/interested-experts`);
+        if (!res.ok) throw new Error("Failed");
+        const experts = await res.json() || [];
+        roadmapExpertsById = Object.fromEntries(experts.map(expert => [expert._id, expert]));
+        roadmapExpertIdByThreadId = Object.fromEntries(
+          experts
+            .filter(expert => expert.thread_id)
+            .map(expert => [String(expert.thread_id), expert._id])
+        );
+
+        let assignedHtml = "";
+        let otherExperts = experts;
+
+        if (order.assigned_expert_id) {
+          const assignedExp = experts.find(e => e._id === order.assigned_expert_id);
+          const name = assignedExp ? assignedExp.name : (order.expert_name || "Assigned Expert");
+          const domain = assignedExp ? assignedExp.domain : "";
+          if (!roadmapExpertsById[order.assigned_expert_id]) {
+            roadmapExpertsById[order.assigned_expert_id] = {
+              _id: order.assigned_expert_id,
+              name,
+              domain,
+              quality_score: 0,
+              average_rating: 0,
+              review_count: 0,
+              tasks_completed: 0,
+              about_me: "",
+              qualifications: "",
+              unread_count: 0
+            };
+          }
+
+          assignedHtml = `
+            <div style="padding: 10px 16px; background: var(--brand-primary-ultra); border-bottom: 1.5px solid var(--color-gray-200); font-size:11px; font-weight:700; color:var(--brand-primary); text-transform:uppercase; letter-spacing:0.05em; flex-shrink:0;">
+              Assigned Expert
+            </div>
+            <div class="roadmap-expert-card" onclick="openAssignedExpertChat('${order.thread_b_id}', '${name.replace(/'/g, "\\'")}')" style="cursor:pointer; background: var(--brand-primary-ultra); border-bottom: 1.5px solid var(--color-gray-200); transition: background 0.2s;">
+              <div class="roadmap-expert-info">
+                <div class="roadmap-expert-name" style="color:var(--brand-primary-dark); font-weight:700;">${name}</div>
+              </div>
+              <div class="roadmap-expert-actions">
+                <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); openRoadmapExpertProfile('${order.assigned_expert_id}')">View profile</button>
+                <button class="btn btn-sm btn-primary" disabled onclick="event.stopPropagation();">Assign</button>
+              </div>
+            </div>
+            <div style="padding: 10px 16px; border-bottom: 1px solid var(--color-gray-200); font-size:11px; font-weight:600; color:var(--color-gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-top: 8px; flex-shrink:0;">
+              Other Interested Experts
+            </div>
+          `;
+
+          otherExperts = experts.filter(e => e._id !== order.assigned_expert_id);
+        }
+
+        let otherHtml = "";
+        if (otherExperts.length === 0) {
+          otherHtml = `<div style="padding:14px 16px; font-size:13px; color:var(--color-gray-500); text-align:center;">No other experts have applied.</div>`;
+        } else {
+          otherHtml = otherExperts.map(e => {
+            const unreadBadge = e.unread_count > 0
+              ? `<span class="roadmap-expert-unread-badge" data-expert-unread="${e._id}">${e.unread_count}</span>`
+              : "";
+            return `
+              <div class="roadmap-expert-card" data-expert-id="${e._id}" onclick="openNegotiationChat('${questionId}', '${e._id}', '${e.name.replace(/'/g, "\\'")}')" style="cursor:pointer; transition: background 0.2s;">
+                <div class="roadmap-expert-info">
+                  <div class="roadmap-expert-name">${e.name}</div>
+                </div>
+                <div class="roadmap-expert-actions" data-expert-actions="${e._id}">
+                  ${unreadBadge}
+                  <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); openRoadmapExpertProfile('${e._id}')">View profile</button>
+                  <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); assignExpert('${questionId}', '${e._id}')">Assign</button>
+                </div>
+              </div>
+            `;
+          }).join("");
+
+        }
+
+        panel.innerHTML = assignedHtml + otherHtml;
+      } catch (err) {
+        console.error("Load experts error:", err);
+        panel.innerHTML = `<div style="padding:14px 16px; font-size:13px; color:var(--color-danger); text-align:center;">Failed to load experts.</div>`;
+      }
+    }
+
     async function sendMessageToThread(questionId, threadType, body) {
       const res = await apiFetch(`/admin/orders/${questionId}`);
       const order = await res.json();
@@ -840,11 +1265,11 @@
       const paymentLabel = refundType === "completion" ? "completion payment" : "advance payment";
       document.getElementById("refund-modal-desc").textContent = `The student paid ${formatMoney(maxRefundAmount || 0, currency)} as ${paymentLabel}. You can request a partial or full refund.`;
       document.getElementById("refund-amount-label").textContent = `Refund Amount (${String(currency || "inr").toUpperCase()})`;
-      
+
       const btn = document.getElementById("refund-submit-btn");
       if (btn) {
-          btn.disabled = false;
-          btn.textContent = "Submit Refund Request";
+        btn.disabled = false;
+        btn.textContent = "Submit Refund Request";
       }
 
       document.getElementById("refund-modal").classList.add("active");
@@ -857,7 +1282,7 @@
 
     async function submitRefundModal() {
       const questionId = document.getElementById("refund-modal-qid").value;
-      const reason     = document.getElementById("refund-reason-input").value.trim();
+      const reason = document.getElementById("refund-reason-input").value.trim();
       const refundAmount = document.getElementById("refund-amount-input").value;
 
       if (!reason) {
@@ -874,9 +1299,9 @@
       btn.textContent = "Submitting...";
 
       try {
-        const res  = await apiFetch(`/admin/orders/${questionId}/initiate-refund`, {
+        const res = await apiFetch(`/admin/orders/${questionId}/initiate-refund`, {
           method: "POST",
-          body:   JSON.stringify({ reason: reason, refund_amount: parseFloat(refundAmount) })
+          body: JSON.stringify({ reason: reason, refund_amount: parseFloat(refundAmount) })
         });
         const data = await res.json();
 
@@ -911,7 +1336,8 @@
         <h2 style="font-size: 18px; font-weight: 700; color: var(--color-gray-900);">⚠️ Initiate Refund</h2>
         <button class="btn btn-ghost btn-sm" onclick="closeRefundModal()">✕</button>
       </div>
-      <p id="refund-modal-desc" style="font-size: 14px; color: var(--color-gray-600); margin-bottom: 16px; line-height: 1.6;">
+      <p id="refund-modal-desc"
+        style="font-size: 14px; color: var(--color-gray-600); margin-bottom: 16px; line-height: 1.6;">
         This will send a refund request to the Super Admin for approval.
         The advance amount will be refunded to the student if approved.
         Please provide a clear reason below.
@@ -919,7 +1345,8 @@
       <input type="hidden" id="refund-modal-qid">
       <input type="hidden" id="refund-modal-currency" value="inr">
       <div class="form-group">
-        <label class="label"><span id="refund-amount-label">Refund Amount (INR)</span> <span style="color:var(--color-danger)">*</span></label>
+        <label class="label"><span id="refund-amount-label">Refund Amount (INR)</span> <span
+            style="color:var(--color-danger)">*</span></label>
         <input type="number" id="refund-amount-input" class="input" step="0.01" min="0.01" style="width: 100%;">
       </div>
       <div class="form-group">

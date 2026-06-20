@@ -236,12 +236,6 @@ def set_quote(question_id):
     if str(question.get("assigned_employee_id")) != str(employee["_id"]):
         return jsonify({"error": "You must claim this question before setting a price."}), 403
 
-    from app.utils.constants import OrderStatus
-    if question["status"] not in (OrderStatus.AWAITING_QUOTE, OrderStatus.PENDING_PAYMENT):
-        return jsonify({"error": f"Cannot edit price in current status: {question['status']}"}), 400
-
-    is_update = (question["status"] == OrderStatus.PENDING_PAYMENT)
-
     try:
         student_price = float(data.get("student_price"))
         expert_payout = float(data.get("expert_payout"))
@@ -253,18 +247,15 @@ def set_quote(question_id):
     if student_price <= 0 or expert_payout <= 0:
         return jsonify({"error": "Both prices must be greater than zero."}), 400
 
-    from app.services.diamond_engine import set_price_quote
-    set_price_quote(question_id, student_price, expert_payout, student_currency, expert_currency)
-    
-    # Auto-approve the price (replaces Maker-Checker flow)
-    from app.services.diamond_engine import approve_price
-    approve_price(question_id)
-
-    # Sync with payments record
-    from app.services.payment_service import ensure_payment_record
-    ensure_payment_record(question_id, student_price, question["student_id"])
-
-    from app.services.email_service import send_price_quote_email
+    from app.utils.constants import OrderStatus
+    editable_statuses = (
+        OrderStatus.AWAITING_QUOTE,
+        OrderStatus.PENDING_PAYMENT,
+        OrderStatus.IN_PROGRESS,
+        OrderStatus.REVIEWING,
+    )
+    if question["status"] not in editable_statuses:
+        return jsonify({"error": f"Cannot edit price in current status: {question['status']}"}), 400
 
     old_student_price = question.get("student_price")
     old_expert_payout = question.get("expert_payout")
@@ -280,6 +271,38 @@ def set_quote(question_id):
         or round(float(old_expert_payout or 0), 2) != round(expert_payout, 2)
         or old_expert_currency != expert_currency
     )
+
+    payment = db.payments.find_one({"question_id": oid(question_id)})
+    payment_started = bool(
+        payment and (
+            payment.get("advance_paid")
+            or payment.get("completion_paid")
+            or payment.get("advance_bypassed")
+        )
+    )
+
+    if payment_started and student_price_changed:
+        return jsonify({"error": "Student price cannot be changed after advance payment starts. You can still update the expert payout."}), 400
+
+    if payment and payment.get("completion_paid") and expert_price_changed:
+        return jsonify({"error": "Expert payout cannot be changed after completion payment is paid."}), 400
+
+    is_update = question["status"] != OrderStatus.AWAITING_QUOTE
+
+    from app.services.diamond_engine import set_price_quote
+    set_price_quote(question_id, student_price, expert_payout, student_currency, expert_currency)
+
+    if question["status"] == OrderStatus.AWAITING_QUOTE:
+        # Auto-approve the initial price (replaces Maker-Checker flow)
+        from app.services.diamond_engine import approve_price
+        approve_price(question_id)
+
+    if student_price_changed and not payment_started:
+        # Sync with payments record only while the student-facing payment can still change.
+        from app.services.payment_service import ensure_payment_record
+        ensure_payment_record(question_id, student_price, question["student_id"])
+
+    from app.services.email_service import send_price_quote_email
 
     def insert_thread_message(thread_type, body):
         thread = db.threads.find_one({
@@ -312,6 +335,68 @@ def set_quote(question_id):
         except Exception:
             pass
 
+    def insert_message_for_thread(thread, body):
+        if not thread or not employee:
+            return
+
+        now = datetime.utcnow()
+        db.messages.insert_one({
+            "thread_id":      thread["_id"],
+            "sender_user_id": employee["user_id"],
+            "body":           body,
+            "created_at":     now
+        })
+        db.threads.update_one(
+            {"_id": thread["_id"]},
+            {"$set": {"updated_at": now, "employee_last_read_at": now}},
+        )
+        try:
+            from app.extensions import socketio
+            _tid = str(thread["_id"])
+            _payload = {
+                "thread_id":      _tid,
+                "sender_user_id": str(employee["user_id"]),
+                "sender_role":    "employee",
+                "body":           body,
+                "created_at":     now.isoformat(),
+            }
+            socketio.start_background_task(
+                lambda: socketio.emit("new_message", _payload, room=f"thread_{_tid}")
+            )
+        except Exception:
+            pass
+
+    def insert_expert_price_message(body):
+        expert_ids = []
+        if question.get("assigned_expert_id"):
+            expert_ids.append(question["assigned_expert_id"])
+        for expert_id in question.get("interested_expert_ids", []):
+            if expert_id not in expert_ids:
+                expert_ids.append(expert_id)
+
+        for expert_id in expert_ids:
+            thread_type = "B" if question.get("assigned_expert_id") == expert_id else "N"
+            thread = db.threads.find_one({
+                "question_id": oid(question_id),
+                "thread_type": thread_type,
+                "expert_id": expert_id,
+            })
+            if not thread and thread_type == "N":
+                now = datetime.utcnow()
+                thread_id = db.threads.insert_one({
+                    "question_id": oid(question_id),
+                    "thread_type": "N",
+                    "student_id": None,
+                    "expert_id": expert_id,
+                    "employee_id": employee["_id"],
+                    "created_at": now,
+                    "updated_at": now,
+                    "employee_last_read_at": now,
+                }).inserted_id
+                thread = db.threads.find_one({"_id": thread_id})
+
+            insert_message_for_thread(thread, body)
+
     student_total = money_label(student_price, student_currency)
     student_advance = money_label(student_price / 2, student_currency)
     student_completion = money_label(student_price - student_price / 2, student_currency)
@@ -334,13 +419,18 @@ def set_quote(question_id):
             )
         insert_thread_message("A", msg_body)
 
-    if is_update and expert_price_changed and question.get("assigned_expert_id"):
+    if expert_price_changed:
         expert_body = (
             f"**Payout Updated**\n\n"
             f"The expert payout for this order has been updated to "
             f"{money_label(expert_payout, expert_currency)}."
+            if is_update
+            else
+            f"**Expert Payout Set**\n\n"
+            f"The expert payout for this order is "
+            f"{money_label(expert_payout, expert_currency)}."
         )
-        insert_thread_message("B", expert_body)
+        insert_expert_price_message(expert_body)
 
     if (not is_update) or student_price_changed:
         student = db.students.find_one({"_id": question["student_id"]})
@@ -489,25 +579,38 @@ def assign(question_id):
     employee = db.employees.find_one({"user_id": oid(uid)})
 
     # Thread A is NOT created here — it's created via start-negotiation
-    # Create Thread B — Expert <-> Admin only
+    # Move/convert Thread N to Thread B if it exists, otherwise create Thread B
     existing_b = db.threads.find_one({
         "question_id": oid(question_id),
         "thread_type": "B"
     })
     if not existing_b:
-        print(f"[DEBUG] assign: Creating Thread B for question {question_id}")
-        try:
-            db.threads.insert_one({
-                "question_id": oid(question_id),
-                "thread_type": "B",
-                "student_id":  None,                        # NEVER set on Thread B
-                "expert_id":   oid(data["expert_id"]),
-                "employee_id": employee["_id"] if employee else None,
-                "created_at":  datetime.utcnow()
-            })
-            print(f"[DEBUG] assign: Thread B created OK")
-        except Exception as e:
-            print(f"[ERROR] assign: Thread B insert FAILED: {e}")
+        # Check if there is an existing negotiation thread (Thread N) for this expert
+        thread_n = db.threads.find_one({
+            "question_id": oid(question_id),
+            "thread_type": "N",
+            "expert_id": oid(data["expert_id"])
+        })
+        if thread_n:
+            db.threads.update_one(
+                {"_id": thread_n["_id"]},
+                {"$set": {"thread_type": "B"}}
+            )
+            print(f"[DEBUG] assign: Converted Thread N ({thread_n['_id']}) to Thread B")
+        else:
+            print(f"[DEBUG] assign: Creating new Thread B for question {question_id}")
+            try:
+                db.threads.insert_one({
+                    "question_id": oid(question_id),
+                    "thread_type": "B",
+                    "student_id":  None,                        # NEVER set on Thread B
+                    "expert_id":   oid(data["expert_id"]),
+                    "employee_id": employee["_id"] if employee else None,
+                    "created_at":  datetime.utcnow()
+                })
+                print(f"[DEBUG] assign: Thread B created OK")
+            except Exception as e:
+                print(f"[ERROR] assign: Thread B insert FAILED: {e}")
     else:
         print(f"[DEBUG] assign: Thread B already exists: {existing_b['_id']} (unexpected after unassign)")
 
@@ -556,12 +659,14 @@ def unassign(question_id):
     if not employee or str(question.get("assigned_employee_id")) != str(employee["_id"]):
         return jsonify({"error": "You must claim this question before modifying it."}), 403
 
-    # Delete Thread B and all its messages
+    # Convert Thread B back to Thread N instead of deleting it, so negotiation history is preserved
     thread_b = db.threads.find_one({"question_id": oid(question_id), "thread_type": "B"})
     if thread_b:
-        deleted_msgs = db.messages.delete_many({"thread_id": thread_b["_id"]})
-        db.threads.delete_one({"_id": thread_b["_id"]})
-        print(f"[DEBUG] unassign: Deleted Thread B and {deleted_msgs.deleted_count} messages")
+        db.threads.update_one(
+            {"_id": thread_b["_id"]},
+            {"$set": {"thread_type": "N"}}
+        )
+        print(f"[DEBUG] unassign: Converted Thread B ({thread_b['_id']}) back to Thread N")
 
     # Unassign expert
     db.questions.update_one(
@@ -571,23 +676,85 @@ def unassign(question_id):
 
     return jsonify({"status": "unassigned"}), 200
 
+@admin_bp.route("/orders/<question_id>/negotiation/<expert_id>", methods=["GET"])
+@admin_required
+def get_negotiation_thread(question_id, expert_id):
+    uid = get_jwt_identity()
+    db = get_db()
+
+    question = db.questions.find_one({"_id": oid(question_id)})
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+
+    employee = db.employees.find_one({"user_id": oid(uid)})
+    if not employee or str(question.get("assigned_employee_id")) != str(employee["_id"]):
+        return jsonify({"error": "You must claim this question before negotiating."}), 403
+
+    # Check if expert is in the interested list
+    if oid(expert_id) not in question.get("interested_expert_ids", []):
+        return jsonify({"error": "Expert is not interested in this order."}), 400
+
+    # Find or create Thread N
+    thread_n = db.threads.find_one({
+        "question_id": oid(question_id),
+        "thread_type": "N",
+        "expert_id": oid(expert_id)
+    })
+
+    now = datetime.utcnow()
+
+    if not thread_n:
+        thread_id = db.threads.insert_one({
+            "question_id": oid(question_id),
+            "thread_type": "N",
+            "student_id": None,
+            "expert_id": oid(expert_id),
+            "employee_id": employee["_id"],
+            "employee_last_read_at": now,
+            "created_at": now
+        }).inserted_id
+    else:
+        updates = {"employee_last_read_at": now}
+        if not thread_n.get("employee_id"):
+            updates["employee_id"] = employee["_id"]
+        db.threads.update_one({"_id": thread_n["_id"]}, {"$set": updates})
+        thread_id = thread_n["_id"]
+
+    return jsonify({"thread_id": str(thread_id)}), 200
+
+
 
 @admin_bp.route("/orders/<question_id>/interested-experts", methods=["GET"])
 @admin_required
 def interested_experts(question_id):
+    uid      = get_jwt_identity()
     db       = get_db()
     question = db.questions.find_one({"_id": oid(question_id)})
     if not question:
         return jsonify({"error": "Not found"}), 404
+
+    employee = db.employees.find_one({"user_id": oid(uid)})
+    emp_user_oid = oid(uid) if employee else None
 
     experts = list(db.experts.find({"_id": {"$in": question.get("interested_expert_ids", [])}}))
     result  = []
     domain_name_map = _get_domain_name_map(db, [e.get("domain_id") for e in experts])
 
     for e in experts:
+        # Check Thread N for unread messages from this expert
+        unread_count = 0
+        thread_n = db.threads.find_one({
+            "question_id": oid(question_id),
+            "thread_type": "N",
+            "expert_id": e["_id"]
+        })
+        if thread_n and emp_user_oid:
+            unread_count = _count_employee_unread_messages(db, thread_n, emp_user_oid)
+
         result.append({
             "_id":             str(e["_id"]),
             "name":            e["name"],
+            "display_name":    e.get("display_name") or e.get("name", "Expert"),
             "domain":          _resolve_domain_name(
                 db,
                 domain_id=e.get("domain_id"),
@@ -595,9 +762,16 @@ def interested_experts(question_id):
                 domain_name_map=domain_name_map
             ),
             "quality_score":   e.get("quality_score", 0),
+            "average_rating":  e.get("average_rating", 0.0),
+            "review_count":    e.get("review_count", 0),
             "tasks_completed": e.get("tasks_completed", 0),
+            "about_me":        e.get("about_me") or e.get("bio", ""),
+            "qualifications":  e.get("qualifications", ""),
+            "unread_count":    unread_count,
+            "thread_id":       str(thread_n["_id"]) if thread_n else None,
         })
     return jsonify(result), 200
+
 
 
 @admin_bp.route("/orders/<question_id>/thread-a", methods=["GET"])
@@ -1211,6 +1385,7 @@ def search_experts():
     return jsonify([{
         "_id":             str(e["_id"]),
         "name":            e["name"],
+        "display_name":    e.get("display_name") or e.get("name", "Expert"),
         "domain":          _resolve_domain_name(
             db,
             domain_id=e.get("domain_id"),
@@ -1218,8 +1393,12 @@ def search_experts():
             domain_name_map=domain_name_map
         ),
         "quality_score":   e.get("quality_score", 0),
+        "average_rating":  e.get("average_rating", 0.0),
+        "review_count":    e.get("review_count", 0),
         "on_time_rate":    e.get("on_time_rate", 0),
         "tasks_completed": e.get("tasks_completed", 0),
+        "about_me":        e.get("about_me") or e.get("bio", ""),
+        "qualifications":  e.get("qualifications", ""),
     } for e in experts]), 200
 
 

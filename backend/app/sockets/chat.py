@@ -69,8 +69,11 @@ def _can_join(identity, thread):
         if not expert_prof:
             print(f"[DEBUG] _can_join: No expert profile found for user {user_oid}")
             return False
+        # Thread B: assigned expert ↔ admin
+        # Thread E: expert ↔ super admin
+        # Thread N: interested (not yet assigned) expert ↔ admin (negotiation)
         result = (
-            t_type in ("B", "E")
+            t_type in ("B", "E", "N")
             and thread.get("expert_id") == expert_prof["_id"]
         )
         if not result:
@@ -83,18 +86,19 @@ def _can_join(identity, thread):
 
 def _mark_thread_read(db, thread, identity, now=None):
     """
-    Track participant read state for super-admin direct threads.
+    Track participant read state for threads.
     """
-    if not thread or thread.get("thread_type") not in ("E", "F"):
+    if not thread or thread.get("thread_type") not in ("E", "F", "N", "B"):
         return
 
     t_type = thread.get("thread_type")
     role = identity.get("role")
     now = now or datetime.utcnow()
     updates = {}
-    if t_type == "E" and role == "expert":
+    
+    if t_type in ("E", "N", "B") and role == "expert":
         updates["expert_last_read_at"] = now
-    elif t_type == "F" and role == "employee":
+    elif t_type in ("F", "N", "B") and role == "employee":
         updates["employee_last_read_at"] = now
     elif role == "super_admin":
         updates["super_admin_last_read_at"] = now
@@ -263,9 +267,11 @@ def on_send_message(data):
     print(f"[DEBUG] Message inserted with id {result.inserted_id}")
 
     thread_updates = {"updated_at": now}
-    if thread.get("thread_type") == "E":
+    if thread.get("thread_type") in ("E", "N", "B"):
         if identity["role"] == "expert":
             thread_updates["expert_last_read_at"] = now
+        elif identity["role"] == "employee":
+            thread_updates["employee_last_read_at"] = now
         elif identity["role"] == "super_admin":
             thread_updates["super_admin_last_read_at"] = now
     elif thread.get("thread_type") == "F":
@@ -353,7 +359,7 @@ def _notify_other_participants(thread, sender_identity, body, db):
         if super_admin_user_id and super_admin_user_id != sender_oid:
             recipients.append(str(super_admin_user_id))
     else:
-        # Thread B: Expert ↔ Admin
+        # Thread B/N: Expert ↔ Admin
         if thread.get("expert_id"):
             expert = db.experts.find_one({"_id": thread["expert_id"]}, {"user_id": 1})
             if expert and expert["user_id"] != sender_oid:
