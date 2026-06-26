@@ -397,9 +397,9 @@
 
       let html = `<div class="workflow-stepper">
         <div class="workflow-stepper-header">
-            <h3 style="margin: 0; font-size: 16px; color: var(--color-gray-800);">Order Roadmap</h3>
+            <h3 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-gray-400);">Order Roadmap</h3>
             <button class="btn btn-ghost btn-sm" onclick="refreshRoadmap('${order._id}')" title="Refresh Roadmap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                 </svg>
             </button>
@@ -409,12 +409,17 @@
       // Step 1: Pricing
       html += `
         <div class="workflow-step ${step1Done ? 'done workflow-step--editable' : 'active'}">
-            <div class="workflow-step-header">
+            <div class="workflow-step-indicator">
                 <div class="workflow-step-badge">${step1Done ? '✓' : '1'}</div>
-                <span>${step1Done ? 'Prices Set' : 'Set Prices'}</span>
             </div>
-            <div class="workflow-step-body">
-                ${renderPricingSectionInner(order)}
+            <div class="workflow-step-content">
+                <div class="workflow-step-header">
+                    <span>${step1Done ? 'Prices Set' : 'Set Prices'}</span>
+                    ${step1Done ? `<span class="workflow-step-summary">Student: <strong>${formatMoney(order.student_price, order.student_currency)}</strong> &nbsp;·&nbsp; Expert: <strong>${formatMoney(order.expert_payout, order.expert_currency)}</strong></span>` : ''}
+                </div>
+                <div class="workflow-step-body">
+                    ${renderPricingSectionInner(order)}
+                </div>
             </div>
         </div>
       `;
@@ -422,37 +427,39 @@
       // Step 2: Advance Payment
       html += `
         <div class="workflow-step ${step2Done ? 'done' : (step2Active ? 'active' : 'locked')}">
-            <div class="workflow-step-header">
+            <div class="workflow-step-indicator">
                 <div class="workflow-step-badge">${step2Done ? '✓' : '2'}</div>
-                Advance Payment
             </div>
-            <div class="workflow-step-body">
-                ${step2Locked ? `<div class="workflow-step-summary">Complete Step 1 first.</div>` : ''}
-                ${step2Active ? `
-                    <div style="margin-bottom:12px;font-size:13px;color:var(--color-gray-600)">Student pays 50% advance to start work.</div>
-                    ${order.payment ? `
-                        <div style="background: var(--color-gray-50); border: 1px solid var(--color-gray-200); padding: 12px; border-radius: var(--radius-md); margin-bottom: 12px;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                                <span style="font-size:12px; color:var(--color-gray-500);">Advance Amount:</span>
-                                <span style="font-size:13px; font-weight:600; color:var(--color-gray-900);">${formatMoney(order.payment.advance_amount, order.payment.currency || order.student_currency)}</span>
+            <div class="workflow-step-content">
+                <div class="workflow-step-header">
+                    <span>Advance Payment</span>
+                    ${step2Done ? `<span class="workflow-step-summary">${advanceBypassed ? `Bypassed — Full after completion` : `Paid: ${formatMoney(order.payment.advance_amount, order.payment?.currency || order.student_currency)}`}</span>` : ''}
+                </div>
+                <div class="workflow-step-body">
+                    ${step2Locked ? '' : ''}
+                    ${step2Active ? `
+                        <p style="margin:0 0 10px;font-size:12px;color:var(--color-gray-500);">Student pays 50% advance to start work.</p>
+                        ${order.payment ? `
+                            <div style="background:var(--color-gray-50);border:1px solid var(--color-gray-100);padding:10px 12px;border-radius:8px;margin-bottom:10px;display:flex;gap:20px;">
+                                <div style="font-size:12px;color:var(--color-gray-400);">Advance<br><strong style="font-size:14px;color:var(--color-gray-900);">${formatMoney(order.payment.advance_amount, order.payment.currency || order.student_currency)}</strong></div>
+                                <div style="font-size:12px;color:var(--color-gray-400);">Completion<br><strong style="font-size:14px;color:var(--color-gray-900);">${formatMoney(order.payment.completion_amount, order.payment.currency || order.student_currency)}</strong></div>
                             </div>
-                            <div style="display:flex; justify-content:space-between;">
-                                <span style="font-size:12px; color:var(--color-gray-500);">Completion Amount:</span>
-                                <span style="font-size:13px; font-weight:600; color:var(--color-gray-900);">${formatMoney(order.payment.completion_amount, order.payment.currency || order.student_currency)}</span>
+                            <div style="font-size:12px;color:#d97706;font-weight:500;display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+                                <div class="spinner-small" style="width:11px;height:11px;"></div>
+                                Waiting for student payment…
                             </div>
-                        </div>
-                        <div class="workflow-step-summary" style="color:#d97706;font-weight:500; display:flex; align-items:center; gap:8px;">
-                            <div class="spinner-small" style="width:14px; height:14px;"></div>
-                            Waiting for student payment...
-                        </div>
-                        <button class="btn btn-secondary btn-sm" style="margin-top:12px; width:100%;" onclick="setupPayment('${order._id}')">Re-send Payment Link</button>
-                        <button class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; color:#7c3aed; border-color:#c4b5fd;" onclick="bypassAdvancePayment('${order._id}')">Bypass Advance — Full Payment After Completion</button>
-                    ` : `
-                        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="setupPayment('${order._id}')">Activate Payment Link</button>
-                        <button class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; color:#7c3aed; border-color:#c4b5fd;" onclick="bypassAdvancePayment('${order._id}')">Bypass Advance — Full Payment After Completion</button>
-                    `}
-                ` : ''}
-                ${step2Done ? `<div class="workflow-step-summary">${advanceBypassed ? `Advance bypassed. Full amount due after completion: ${formatMoney(order.payment?.completion_amount || order.student_price, order.payment?.currency || order.student_currency)}` : `Advance Paid: ${formatMoney(order.payment.advance_amount, order.payment?.currency || order.student_currency)}`}</div>` : ''}
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;" onclick="setupPayment('${order._id}')">Re-send Link</button>
+                                <button class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;color:#7c3aed;border-color:#c4b5fd;" onclick="bypassAdvancePayment('${order._id}')">Bypass</button>
+                            </div>
+                        ` : `
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn btn-primary btn-sm" style="flex:1;font-size:12px;" onclick="setupPayment('${order._id}')">Activate Link</button>
+                                <button class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;color:#7c3aed;border-color:#c4b5fd;" onclick="bypassAdvancePayment('${order._id}')">Bypass</button>
+                            </div>
+                        `}
+                    ` : ''}
+                </div>
             </div>
         </div>
       `;
@@ -461,19 +468,17 @@
       const assignedExp = order.interested_experts && order.assigned_expert_id ? order.interested_experts.find(e => e._id === order.assigned_expert_id) : null;
       html += `
         <div class="workflow-step ${step3Done ? 'done' : (step3Active ? 'active' : 'locked')}">
-            <div class="workflow-step-header">
+            <div class="workflow-step-indicator">
                 <div class="workflow-step-badge">${step3Done ? '✓' : '3'}</div>
-                Assign Expert
             </div>
-            <div class="workflow-step-body">
-                ${step3Locked ? `<div class="workflow-step-summary">Complete or bypass advance payment first.</div>` : ''}
-                ${step3Active ? renderAssignmentSectionInner(order) : ''}
-                ${step3Done ? `
-                    <div class="workflow-step-summary" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>Expert Assigned: <strong>${assignedExp ? assignedExp.name : order.assigned_expert_id}</strong></span>
-                        <button class="btn btn-secondary btn-sm" style="color:var(--color-danger); border-color:var(--color-danger);" onclick="unassignExpert('${order._id}')">Remove & Reassign</button>
-                    </div>
-                ` : ''}
+            <div class="workflow-step-content">
+                <div class="workflow-step-header">
+                    <span>Assign Expert</span>
+                    ${step3Done ? `<span class="workflow-step-summary">Assigned: <strong>${assignedExp ? assignedExp.name : order.assigned_expert_id}</strong> <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--color-danger);padding:2px 6px;" onclick="unassignExpert('${order._id}')">Remove</button></span>` : ''}
+                </div>
+                <div class="workflow-step-body">
+                    ${step3Active ? renderAssignmentSectionInner(order) : ''}
+                </div>
             </div>
         </div>
       `;
@@ -481,13 +486,17 @@
       // Step 4: Solution Phase
       html += `
         <div class="workflow-step ${step4Done ? 'done' : (step4Active ? 'active' : 'locked')}">
-            <div class="workflow-step-header">
+            <div class="workflow-step-indicator">
                 <div class="workflow-step-badge">${step4Done ? '✓' : '4'}</div>
-                Solution Phase & Forwarding
             </div>
-            <div class="workflow-step-body">
-                ${step4Locked ? `<div class="workflow-step-summary">Assign an expert first.</div>` : ''}
-                ${(step4Active || step4Done) ? renderFilesSectionInner(order) : ''}
+            <div class="workflow-step-content">
+                <div class="workflow-step-header">
+                    <span>Solution &amp; Forwarding</span>
+                    ${step4Done ? `<span class="workflow-step-summary">Completion paid</span>` : ''}
+                </div>
+                <div class="workflow-step-body">
+                    ${(step4Active || step4Done) ? renderFilesSectionInner(order) : ''}
+                </div>
             </div>
         </div>
       `;
@@ -495,18 +504,22 @@
       // Step 5: Completion & Feedback
       html += `
         <div class="workflow-step ${step5Done ? 'done' : (step5Active ? 'active' : 'locked')}">
-            <div class="workflow-step-header">
+            <div class="workflow-step-indicator">
                 <div class="workflow-step-badge">${step5Done ? '✓' : '5'}</div>
-                Completion & Feedback
             </div>
-            <div class="workflow-step-body">
-                ${step5Locked ? `<div class="workflow-step-summary">Wait for full payment.</div>` : ''}
-                ${(step5Active || step5Done) ? `
-                    <div style="margin-bottom:12px;font-size:13px;color:var(--color-gray-600)">
-                      ${order.payment?.completion_paid ? `✅ Completion Paid: ${formatMoney(order.payment.completion_amount, order.payment?.currency || order.student_currency)}` : `⏳ Waiting for completion payment...`}
-                    </div>
-                    ${step5Done ? `<div class="workflow-step-summary">Order closed.</div>` : renderFeedbackSectionInner(order)}
-                ` : ''}
+            <div class="workflow-step-content">
+                <div class="workflow-step-header">
+                    <span>Completion &amp; Feedback</span>
+                    ${step5Done ? `<span class="workflow-step-summary">Order closed</span>` : ''}
+                </div>
+                <div class="workflow-step-body">
+                    ${(step5Active || step5Done) ? `
+                        <div style="margin-bottom:12px;font-size:13px;color:var(--color-gray-600)">
+                          ${order.payment?.completion_paid ? `✅ Completion Paid: ${formatMoney(order.payment.completion_amount, order.payment?.currency || order.student_currency)}` : `⏳ Waiting for completion payment…`}
+                        </div>
+                        ${step5Done ? '' : renderFeedbackSectionInner(order)}
+                    ` : ''}
+                </div>
             </div>
         </div>
       `;
@@ -567,34 +580,28 @@
         ? "Student price is locked because payment has started. Expert payout can still be updated."
         : (hasQuote ? "You can adjust the student quote or expert payout before advance payment starts." : "Set the student quote and expert payout to unlock payment.");
       return `
-            ${hasQuote ? `
-              <div class="workflow-step-summary" style="margin-bottom:var(--space-3); display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:center; justify-content:space-between;">
-                <span>Student: <strong>${formatMoney(order.student_price, order.student_currency)}</strong></span>
-                <span>Expert: <strong>${formatMoney(order.expert_payout, order.expert_currency)}</strong></span>
-              </div>
-            ` : ''}
-            <p style="font-size:12px; color:var(--color-gray-500); margin:0 0 var(--space-3); line-height:1.5;">${helperText}</p>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:var(--space-4); margin-bottom:var(--space-4)">
-                <div class="form-group" style="margin-bottom:0;">
-                    <label class="label">Student Price</label>
-                    <div style="display:flex; gap:8px;">
-                      <input id="student-price" type="number" class="input" step="0.01" min="0" value="${order.student_price || ""}" ${paymentStarted ? "disabled" : ""} style="flex:1; min-width:0;">
-                      <select id="student-currency" class="input" ${paymentStarted ? "disabled" : ""} style="width:92px;">
+            <p style="font-size:12px;color:var(--color-gray-400);margin:0 0 10px;line-height:1.5;">${helperText}</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:var(--color-gray-500);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Student</label>
+                    <div style="display:flex;gap:4px;">
+                      <input id="student-price" type="number" class="input" step="0.01" min="0" value="${order.student_price || ""}" ${paymentStarted ? "disabled" : ""} style="flex:1;min-width:0;padding:6px 8px;font-size:13px;height:34px;">
+                      <select id="student-currency" class="input" ${paymentStarted ? "disabled" : ""} style="width:64px;padding:6px 4px;font-size:12px;height:34px;">
                         ${renderCurrencyOptions(order.student_currency)}
                       </select>
                     </div>
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label class="label">Expert Payout</label>
-                    <div style="display:flex; gap:8px;">
-                      <input id="expert-payout" type="number" class="input" step="0.01" min="0" value="${order.expert_payout || ""}" style="flex:1; min-width:0;">
-                      <select id="expert-currency" class="input" style="width:92px;">
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:var(--color-gray-500);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Expert</label>
+                    <div style="display:flex;gap:4px;">
+                      <input id="expert-payout" type="number" class="input" step="0.01" min="0" value="${order.expert_payout || ""}" style="flex:1;min-width:0;padding:6px 8px;font-size:13px;height:34px;">
+                      <select id="expert-currency" class="input" style="width:64px;padding:6px 4px;font-size:12px;height:34px;">
                         ${renderCurrencyOptions(order.expert_currency)}
                       </select>
                     </div>
                 </div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="submitQuote('${order._id}')">${buttonText}</button>`;
+            <button class="btn btn-primary btn-sm" style="font-size:12px;" onclick="submitQuote('${order._id}')">${buttonText}</button>`;
     }
 
     function renderCurrencyOptions(selected = "inr") {
@@ -697,10 +704,7 @@
                     placeholder="Expert ID or name..." style="flex:1"
                     oninput="searchExperts(this.value)">
             </div>
-            <div style="display:flex;gap:var(--space-4);flex-wrap:wrap;margin-top:var(--space-3);font-size:12px;color:var(--color-gray-600);">
-              <label style="display:flex;align-items:center;gap:6px;"><input id="notify-expert-email" type="checkbox" checked> Email direct invites</label>
-              <label style="display:flex;align-items:center;gap:6px;"><input id="notify-expert-whatsapp" type="checkbox"> WhatsApp request</label>
-            </div>
+
             <div id="expert-search-results" style="margin-top:var(--space-3)"></div>
       `;
     }
@@ -751,10 +755,7 @@
           <div style="display:grid;gap:8px;max-height:340px;overflow:auto;padding-right:4px;">
             ${domainOptions || `<p style="font-size:13px;color:var(--color-gray-500);">No other domains available.</p>`}
           </div>
-          <div style="display:flex;gap:var(--space-4);flex-wrap:wrap;margin-top:var(--space-4);font-size:13px;color:var(--color-gray-600);">
-            <label style="display:flex;align-items:center;gap:6px;"><input id="notify-domain-email" type="checkbox" checked> Email</label>
-            <label style="display:flex;align-items:center;gap:6px;"><input id="notify-domain-whatsapp" type="checkbox"> WhatsApp request</label>
-          </div>
+
           <div style="display:flex;justify-content:flex-end;gap:var(--space-3);padding-top:var(--space-4);border-top:1px solid var(--color-gray-100);margin-top:var(--space-4);">
             <button class="btn btn-secondary" onclick="closeNotifyDomainsModal()">Cancel</button>
             <button class="btn btn-primary" onclick="notifySelectedDomains('${questionId}')">Notify Selected</button>
@@ -783,8 +784,8 @@
         method: "POST",
         body: JSON.stringify({
           domain_ids: domainIds,
-          send_email: document.getElementById("notify-domain-email")?.checked !== false,
-          send_whatsapp: !!document.getElementById("notify-domain-whatsapp")?.checked,
+          send_email: true,
+          send_whatsapp: true,
         })
       });
       const data = await res.json();
@@ -803,8 +804,8 @@
         method: "POST",
         body: JSON.stringify({
           expert_ids: [expertId],
-          send_email: document.getElementById("notify-expert-email")?.checked !== false,
-          send_whatsapp: !!document.getElementById("notify-expert-whatsapp")?.checked,
+          send_email: true,
+          send_whatsapp: true,
         })
       });
       const data = await res.json();
@@ -911,16 +912,17 @@
     }
 
     function renderFilesSectionInner(order) {
-      if (!order.files || order.files.length === 0) {
-        return `<p style="font-size:13px;color:var(--color-gray-500)">No files uploaded yet.</p>`;
+      const expertFiles = (order.files || []).filter(
+        f => (f.category === "solution" || f.uploader_role === "expert") && !!f.submitted_to_admin_at
+      );
+
+      if (expertFiles.length === 0) {
+        return `<p style="font-size:13px;color:var(--color-gray-500)">No solution files have been sent by the expert yet.</p>`;
       }
 
-      const expertFiles = order.files.filter(f => f.category === "solution" || f.uploader_role === "expert");
-
       let html = "";
-
+      const hasUnforwarded = expertFiles.some(f => !f.forwarded_at);
       if (expertFiles.length > 0) {
-        const hasUnforwarded = expertFiles.some(f => !f.forwarded_at);
         html += `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h4 style="font-size:12px;text-transform:uppercase;color:var(--color-gray-500);letter-spacing:0.05em;margin:0;">Expert Solutions</h4>
@@ -941,6 +943,7 @@
                     <p style="font-size:12px;color:var(--color-gray-500)">
                         ${f.file_type.toUpperCase()} ·
                         Uploaded ${new Date(f.uploaded_at).toLocaleDateString()} ·
+                        Sent ${new Date(f.submitted_to_admin_at).toLocaleDateString()} ·
                         ${f.forwarded_at ? "✓ Forwarded to student" : "Not forwarded yet"}
                     </p>
                 </div>

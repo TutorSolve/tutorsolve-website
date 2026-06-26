@@ -1251,9 +1251,14 @@ def order_detail(question_id):
             "uploader_role":     f.get("uploader_role", "student" if f.get("student_user_id") else "expert"),
             "uploader_type":     f.get("uploader_role", "student" if f.get("student_user_id") else "expert"),
             "category":          f.get("category", "attachment" if not f.get("expert_id") else "solution"),
+            "submitted_to_admin_at": str(f["submitted_to_admin_at"]) if f.get("submitted_to_admin_at") else None,
             "forwarded_at":      str(f["forwarded_at"]) if f.get("forwarded_at") else None,
             "uploaded_at":       str(f["uploaded_at"]),
-        } for f in files],
+        } for f in files if (
+            (f.get("uploader_role", "student" if f.get("student_user_id") else "expert") != "expert")
+            or f.get("submitted_to_admin_at")
+            or f.get("category") != "solution"
+        )],
         "interested_experts": interested,
         "additional_domain_ids": [str(domain_id) for domain_id in question.get("additional_domain_ids", [])],
         "additional_domain_names": question.get("additional_domain_names", []),
@@ -1340,13 +1345,15 @@ def refund_flow_detail(question_id):
             "_id": str(f["_id"]),
             "name": f.get("original_filename", "file"),
             "uploaded_at": str(f.get("uploaded_at")) if f.get("uploaded_at") else None,
+            "submitted_to_admin_at": str(f.get("submitted_to_admin_at")) if f.get("submitted_to_admin_at") else None,
             "forwarded_at": str(f.get("forwarded_at")) if f.get("forwarded_at") else None,
             "is_locked": bool(f.get("is_locked", False)),
             "has_preview": bool(f.get("preview_s3_key")),
             "uploader_role": f.get("uploader_role", "student" if f.get("student_user_id") else "expert"),
         }
         if row["uploader_role"] == "expert" or f.get("category") == "solution":
-            solution_files.append(row)
+            if row["submitted_to_admin_at"]:
+                solution_files.append(row)
         else:
             student_files.append(row)
 
@@ -1412,7 +1419,7 @@ def refund_flow_detail(question_id):
         timeline.append({
             "title": "Solutions Uploaded",
             "at": solution_files[0].get("uploaded_at"),
-            "detail": f"{len(solution_files)} file(s) uploaded by expert.",
+            "detail": f"{len(solution_files)} file(s) sent by expert for review.",
             "state": "done"
         })
 
@@ -1686,7 +1693,9 @@ def forward_all_solutions(question_id):
     # category="solution" OR uploader_role="expert"
     query = {
         "question_id": oid(question_id),
-        "$or": [{"category": "solution"}, {"uploader_role": "expert"}]
+        "$or": [{"category": "solution"}, {"uploader_role": "expert"}],
+        "submitted_to_admin_at": {"$ne": None},
+        "forwarded_at": None
     }
     
     expert_files = list(db.files.find(query))
@@ -1749,6 +1758,9 @@ def get_file_url_admin(file_id):
     file = db.files.find_one({"_id": oid(file_id)})
     if not file:
         return jsonify({"error": "Not found"}), 404
+
+    if (file.get("uploader_role") == "expert" or file.get("category") == "solution") and not file.get("submitted_to_admin_at"):
+        return jsonify({"error": "File has not been sent to admin yet"}), 403
 
     # Admin always gets the full file — not the preview
     import mimetypes

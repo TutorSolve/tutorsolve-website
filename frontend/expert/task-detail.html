@@ -174,11 +174,11 @@
                                 style="display:none; border-top:1px solid var(--color-gray-100); padding-top:var(--space-6)">
                                 <button id="submit-btn" class="btn btn-primary" style="width:100%"
                                     onclick="submitSolution()">
-                                    ✓ Mark as Done & Submit
+                                    Send Uploaded Files to Admin
                                 </button>
                                 <p
                                     style="font-size:12px; color:var(--color-gray-500); margin-top:var(--space-3); text-align:center">
-                                    Only click this when you have uploaded all final files.
+                                    Upload as many files as you need, then click here to send the current batch to the employee admin.
                                 </p>
                             </div>
                         </div>
@@ -324,7 +324,7 @@
                     } else if (task.status === "reviewing") {
                         btnAction.style.display = "block";
                         btn.disabled = false;
-                        btn.textContent = "↻ Re-submit & Notify Admin";
+                        btn.textContent = "Submit";
                     } else {
                         btnAction.style.display = "none";
                     }
@@ -435,7 +435,7 @@
                             </div>
                             <div>
                                 <p style="font-size:14px;font-weight:600;color:var(--color-gray-900);margin-bottom:2px;">${escapeHtml(f.original_filename)}</p>
-                                <p style="font-size:11px;color:var(--color-gray-500)">${f.file_type.toUpperCase()} · ${uploadTime}</p>
+                                <p style="font-size:11px;color:var(--color-gray-500)">${f.file_type.toUpperCase()} · ${uploadTime} · ${f.submitted_to_admin_at ? "Sent to admin" : "Draft upload"}</p>
                             </div>
                           </div>
                           ${actionHtml}
@@ -482,9 +482,9 @@
 
         async function submitSolution() {
             const confirmed = await showConfirmModal({
-                title: "Submit Solution",
-                message: "Are you sure you want to mark this task as done and submit for review?",
-                confirmText: "Submit",
+                title: "Send Files to Admin",
+                message: "Send all newly uploaded files to the employee admin for review?",
+                confirmText: "Send Files",
                 cancelText: "Cancel"
             });
             if (!confirmed) return;
@@ -492,10 +492,10 @@
             try {
                 const res = await apiFetch(`/expert/tasks/${qid}/submit`, { method: "POST" });
                 if (res.ok) {
-                    toast("Task submitted for review!");
+                    toast("Files sent to admin for review!");
 
                     if (threadBId) {
-                        sendMessage("I have uploaded the final solutions and marked the task as done. Please review.", threadBId);
+                        sendMessage("I have sent a new batch of solution files for review. Please check them.", threadBId);
                     }
 
                     loadTaskDetail();

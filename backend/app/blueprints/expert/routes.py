@@ -736,6 +736,22 @@ def submit_task(question_id):
     
     if not question:
         return jsonify({"error": "Not found"}), 404
+
+    now = datetime.utcnow()
+    unsent_query = {
+        "question_id": oid(question_id),
+        "expert_id": expert["_id"],
+        "$or": [{"category": "solution"}, {"uploader_role": "expert"}],
+        "submitted_to_admin_at": None
+    }
+    unsent_count = db.files.count_documents(unsent_query)
+    if unsent_count == 0:
+        return jsonify({"error": "No new files to send"}), 400
+
+    db.files.update_many(
+        unsent_query,
+        {"$set": {"submitted_to_admin_at": now}}
+    )
         
     db.questions.update_one(
         {"_id": oid(question_id)},
@@ -752,8 +768,8 @@ def submit_task(question_id):
                 user_id=str(employee["user_id"]),
                 notif_type="solution_submitted",
                 title="Task Submitted for Review",
-                body=f"Expert {expert['name']} has marked the task as done: {question['title']}",
+                body=f"Expert {expert['name']} sent {unsent_count} file(s) for review: {question['title']}",
                 link=f"/admin/cockpit.html?id={question_id}"
             )
             
-    return jsonify({"status": "submitted"}), 200
+    return jsonify({"status": "submitted", "count": unsent_count}), 200

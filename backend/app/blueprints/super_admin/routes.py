@@ -135,6 +135,58 @@ def _expert_display_name(expert_doc, user_doc):
     )
 
 
+def _batch_thread_data(db, thread_ids, threads_list, super_admin_user_oid):
+    """
+    Given a list of thread ObjectIds and the full thread documents, return:
+      - last_msg_by_thread : {thread_id (ObjectId) -> {body, created_at}}
+      - unread_by_thread   : {thread_id (ObjectId) -> int}
+
+    Uses exactly two DB queries regardless of how many threads there are.
+    """
+    last_msg_by_thread = {}
+    unread_by_thread   = {t_id: 0 for t_id in thread_ids}
+
+    if not thread_ids:
+        return last_msg_by_thread, unread_by_thread
+
+    # ── Query A: last message per thread via $group aggregation ──────────────
+    pipeline = [
+        {"$match": {"thread_id": {"$in": thread_ids}}},
+        {"$sort":  {"created_at": -1}},
+        {"$group": {
+            "_id":        "$thread_id",
+            "body":       {"$first": "$body"},
+            "created_at": {"$first": "$created_at"},
+        }},
+    ]
+    for doc in db.messages.aggregate(pipeline):
+        last_msg_by_thread[doc["_id"]] = doc
+
+    # ── Query B: unread messages – one fetch, per-thread cutoff in Python ────
+    # Build a per-thread cutoff map so we can apply the exact read boundary.
+    cutoff_by_thread = {t["_id"]: t.get("super_admin_last_read_at") for t in threads_list}
+
+    # Use the minimum known cutoff to bound the DB scan as tightly as possible.
+    valid_cutoffs = [c for c in cutoff_by_thread.values() if c]
+    min_cutoff    = min(valid_cutoffs) if valid_cutoffs else None
+
+    msg_filter = {
+        "thread_id":       {"$in": thread_ids},
+        "sender_user_id":  {"$ne": super_admin_user_oid},
+    }
+    if min_cutoff:
+        msg_filter["created_at"] = {"$gt": min_cutoff}
+
+    for msg in db.messages.find(msg_filter, {"thread_id": 1, "created_at": 1}):
+        t_id   = msg["thread_id"]
+        cutoff = cutoff_by_thread.get(t_id)
+        # Apply the thread-specific cutoff boundary
+        if cutoff is None or msg["created_at"] > cutoff:
+            unread_by_thread[t_id] = unread_by_thread.get(t_id, 0) + 1
+
+    return last_msg_by_thread, unread_by_thread
+
+
 def _build_expert_chat_item(db, expert_doc, user_doc, super_admin_user_oid=None):
     thread = db.threads.find_one(
         {"thread_type": "E", "expert_id": expert_doc["_id"]},
@@ -1108,30 +1160,100 @@ def list_users():
 @super_admin_bp.route("/expert-chats", methods=["GET"])
 @superadmin_required
 def list_expert_chats():
+    """
+    Optimized: uses ~5 total DB queries regardless of expert count.
+    Previously: 4 queries per expert (N+1 explosion).
+    """
     uid = get_jwt_identity()
     db = get_db()
-    query = (request.args.get("q") or "").strip().lower()
+    query_str = (request.args.get("q") or "").strip().lower()
     super_admin_user_oid = oid(uid)
 
+    # ── 1. Batch-load experts ─────────────────────────────────────────────────
     experts = list(db.experts.find({}).sort("_id", -1).limit(500))
-    user_ids = [e.get("user_id") for e in experts if e.get("user_id")]
+    if not experts:
+        return jsonify([]), 200
 
+    expert_user_ids = [e["user_id"] for e in experts if e.get("user_id")]
+    expert_ids      = [e["_id"]      for e in experts]
+
+    # ── 2. Batch-load users ───────────────────────────────────────────────────
     users_map = {}
-    if user_ids:
-        users = db.users.find({"_id": {"$in": user_ids}, "role": "expert"})
-        users_map = {u["_id"]: u for u in users}
+    if expert_user_ids:
+        users_map = {
+            u["_id"]: u
+            for u in db.users.find({"_id": {"$in": expert_user_ids}, "role": "expert"})
+        }
 
+    # ── 3. Batch-load all E-type threads (one query) ──────────────────────────
+    threads_list      = list(db.threads.find({"thread_type": "E", "expert_id": {"$in": expert_ids}}))
+    threads_by_expert = {t["expert_id"]: t for t in threads_list}
+    thread_ids        = [t["_id"] for t in threads_list]
+
+    # ── 4. Batch-load domain names (one query for all unique domain IDs) ──────
+    raw_domain_ids = list({e["domain_id"] for e in experts if e.get("domain_id")})
+    domain_oids    = [_to_object_id(d) for d in raw_domain_ids if _to_object_id(d)]
+    domain_name_map = {
+        doc["_id"]: doc.get("name", "")
+        for doc in db.domains.find({"_id": {"$in": domain_oids}}, {"name": 1})
+    } if domain_oids else {}
+
+    # ── 5 & 6. Batch last-message + unread counts (two aggregations) ──────────
+    last_msg_by_thread, unread_by_thread = _batch_thread_data(
+        db, thread_ids, threads_list, super_admin_user_oid
+    )
+
+    # ── 7. Assemble result items ──────────────────────────────────────────────
     items = []
     for expert in experts:
         user = users_map.get(expert.get("user_id"))
         if not user:
             continue
 
-        item = _build_expert_chat_item(db, expert, user, super_admin_user_oid)
-        if query:
+        thread = threads_by_expert.get(expert["_id"])
+
+        domain_oid = _to_object_id(expert.get("domain_id"))
+        domain = (
+            domain_name_map.get(domain_oid)
+            or expert.get("domain")
+            or "Unknown"
+        )
+
+        last_message_preview = None
+        last_message_at      = None
+        unread_count         = 0
+
+        if thread:
+            unread_count = unread_by_thread.get(thread["_id"], 0)
+            last_msg     = last_msg_by_thread.get(thread["_id"])
+            if last_msg:
+                body = (last_msg.get("body") or "").strip()
+                last_message_preview = body[:120] + ("..." if len(body) > 120 else "")
+                last_message_at      = _as_iso(last_msg.get("created_at"))
+            else:
+                last_message_at = _as_iso(thread.get("updated_at") or thread.get("created_at"))
+
+        item = {
+            "expert_id":            str(expert["_id"]),
+            "user_id":              str(user["_id"]),
+            "name":                 _expert_display_name(expert, user),
+            "email":                user.get("email", ""),
+            "domain":               domain,
+            "kyc_status":           expert.get("kyc_status", KYCStatus.PENDING),
+            "is_banned":            bool(user.get("is_banned", False)),
+            "is_active":            bool(user.get("is_active", True)),
+            "joined_at":            _as_iso(user.get("created_at")),
+            "thread_id":            str(thread["_id"]) if thread else None,
+            "last_message_preview": last_message_preview,
+            "last_message_at":      last_message_at,
+            "unread_count":         unread_count,
+        }
+
+        if query_str:
             haystack = f"{item['name']} {item['email']} {item['domain']}".lower()
-            if query not in haystack:
+            if query_str not in haystack:
                 continue
+
         items.append(item)
 
     items.sort(
@@ -1203,30 +1325,83 @@ def get_or_create_expert_chat_thread(expert_user_id):
 @super_admin_bp.route("/employee-chats", methods=["GET"])
 @superadmin_required
 def list_employee_chats():
+    """
+    Optimized: uses ~4 total DB queries regardless of employee count.
+    Previously: 3 queries per employee (N+1 explosion).
+    """
     uid = get_jwt_identity()
     db = get_db()
-    query = (request.args.get("q") or "").strip().lower()
+    query_str = (request.args.get("q") or "").strip().lower()
     super_admin_user_oid = oid(uid)
 
+    # ── 1. Batch-load employees ───────────────────────────────────────────────
     employees = list(db.employees.find({}).sort("_id", -1).limit(500))
-    user_ids = [e.get("user_id") for e in employees if e.get("user_id")]
+    if not employees:
+        return jsonify([]), 200
 
+    employee_user_ids = [e["user_id"] for e in employees if e.get("user_id")]
+    employee_ids      = [e["_id"]      for e in employees]
+
+    # ── 2. Batch-load users ───────────────────────────────────────────────────
     users_map = {}
-    if user_ids:
-        users = db.users.find({"_id": {"$in": user_ids}, "role": "employee"})
-        users_map = {u["_id"]: u for u in users}
+    if employee_user_ids:
+        users_map = {
+            u["_id"]: u
+            for u in db.users.find({"_id": {"$in": employee_user_ids}, "role": "employee"})
+        }
 
+    # ── 3. Batch-load all F-type threads (one query) ──────────────────────────
+    threads_list         = list(db.threads.find({"thread_type": "F", "employee_id": {"$in": employee_ids}}))
+    threads_by_employee  = {t["employee_id"]: t for t in threads_list}
+    thread_ids           = [t["_id"] for t in threads_list]
+
+    # ── 4 & 5. Batch last-message + unread counts (two aggregations) ──────────
+    last_msg_by_thread, unread_by_thread = _batch_thread_data(
+        db, thread_ids, threads_list, super_admin_user_oid
+    )
+
+    # ── 6. Assemble result items ──────────────────────────────────────────────
     items = []
     for employee in employees:
         user = users_map.get(employee.get("user_id"))
         if not user:
             continue
 
-        item = _build_employee_chat_item(db, employee, user, super_admin_user_oid)
-        if query:
+        thread = threads_by_employee.get(employee["_id"])
+
+        last_message_preview = None
+        last_message_at      = None
+        unread_count         = 0
+
+        if thread:
+            unread_count = unread_by_thread.get(thread["_id"], 0)
+            last_msg     = last_msg_by_thread.get(thread["_id"])
+            if last_msg:
+                body = (last_msg.get("body") or "").strip()
+                last_message_preview = body[:120] + ("..." if len(body) > 120 else "")
+                last_message_at      = _as_iso(last_msg.get("created_at"))
+            else:
+                last_message_at = _as_iso(thread.get("updated_at") or thread.get("created_at"))
+
+        item = {
+            "employee_id":          str(employee["_id"]),
+            "user_id":              str(user["_id"]),
+            "name":                 _employee_display_name(employee, user),
+            "email":                user.get("email", ""),
+            "is_banned":            bool(user.get("is_banned", False)),
+            "is_active":            bool(user.get("is_active", True)),
+            "joined_at":            _as_iso(user.get("created_at")),
+            "thread_id":            str(thread["_id"]) if thread else None,
+            "last_message_preview": last_message_preview,
+            "last_message_at":      last_message_at,
+            "unread_count":         unread_count,
+        }
+
+        if query_str:
             haystack = f"{item['name']} {item['email']}".lower()
-            if query not in haystack:
+            if query_str not in haystack:
                 continue
+
         items.append(item)
 
     items.sort(

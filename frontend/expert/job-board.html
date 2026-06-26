@@ -209,7 +209,7 @@
         if (currentTab === "available") {
           buttonsHtml = `
             <button class="btn btn-secondary btn-sm" onclick="openJobDetails('${job._id}')">View Details</button>
-            <button class="btn btn-primary btn-sm interest-btn" id="btn-${job._id}" onclick="expressInterest('${job._id}', this)">I'm Interested</button>
+            <button class="btn btn-primary btn-sm interest-btn" id="btn-${job._id}" onclick="expressInterest('${job._id}', this)">Request for assign </button>
           `;
         } else {
           let withdrawHtml = '';
@@ -391,7 +391,7 @@
 
       const actionsContainer = document.getElementById('modal-job-actions');
       if (currentTab === "available") {
-        actionsContainer.innerHTML = `<button class="btn btn-primary" onclick="expressInterest('${job._id}', this)">I'm Interested</button>`;
+        actionsContainer.innerHTML = `<button class="btn btn-primary" onclick="expressInterest('${job._id}', this)">Request for assign </button>`;
       } else {
         let withdrawHtml = '';
         if (job.app_status === "Interested") {

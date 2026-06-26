@@ -271,134 +271,191 @@
     color: #F59E0B;
 }
 
-/* ── Workflow Stepper ────────────────────────────────────── */
+/* ── Workflow Stepper ─── minimalist vertical timeline ─────── */
 .workflow-stepper {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
-    padding: var(--space-4);
+    padding: 0;
 }
 
 .workflow-stepper-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 var(--space-2) var(--space-2) var(--space-2);
+    margin-bottom: 20px;
 }
 
+/* Timeline track wrapper */
 .workflow-step {
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-lg);
-    background: var(--color-white);
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    gap: 0;
     position: relative;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
+    padding: 0;
+    transition: none;
 }
 
-.workflow-step:hover {
-    box-shadow: var(--shadow-md);
+/* The vertical line connecting steps */
+.workflow-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 32px;
+    bottom: -16px;
+    width: 1px;
+    background: var(--color-gray-150, #e9ecef);
+    z-index: 0;
+}
+
+.workflow-step.done:not(:last-child)::after {
+    background: #d1fae5;
+}
+
+.workflow-step.active:not(:last-child)::after {
+    background: var(--brand-primary-light, #c7d2fe);
+}
+
+/* Left column: step indicator */
+.workflow-step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 32px;
+    padding-top: 2px;
+    position: relative;
+    z-index: 1;
+}
+
+.workflow-step-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+    background: var(--color-gray-100);
+    color: var(--color-gray-400);
+    border: 2px solid var(--color-gray-200);
+}
+
+/* Right column: content */
+.workflow-step-content {
+    flex: 1;
+    min-width: 0;
+    padding-bottom: 20px;
+    padding-left: 14px;
 }
 
 .workflow-step-header {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-4);
-    background: linear-gradient(to right, var(--color-gray-50), var(--color-white));
-    border-bottom: 1px solid var(--color-gray-100);
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--color-gray-800);
-}
-
-.workflow-step-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--color-gray-200);
-    color: var(--color-gray-600);
+    justify-content: space-between;
+    padding: 0;
+    background: none;
+    border: none;
     font-size: 13px;
-    font-weight: 700;
-    transition: all 0.3s ease;
+    font-weight: 600;
+    color: var(--color-gray-400);
+    letter-spacing: 0.01em;
+    min-height: 30px;
+    gap: var(--space-2);
 }
 
 .workflow-step-body {
-    padding: var(--space-4);
-    background: var(--color-white);
+    padding: 12px 0 0;
+    background: none;
 }
 
-/* States */
-.workflow-step.active {
-    border-color: var(--brand-primary);
-    box-shadow: 0 4px 12px rgba(78, 74, 229, 0.15), 0 0 0 1px var(--brand-primary);
-    z-index: 10;
-}
-
-.workflow-step.active .workflow-step-header {
-    background: linear-gradient(to right, var(--brand-primary-ultra), var(--color-white));
-    color: var(--brand-primary-dark);
-    border-bottom-color: var(--brand-primary-light);
-}
-
-.workflow-step.active .workflow-step-badge {
-    background: var(--brand-primary);
-    color: var(--color-white);
-    box-shadow: 0 0 8px rgba(78, 74, 229, 0.4);
-}
-
-.workflow-step.done {
+/* ── States ─── */
+/* Locked */
+.workflow-step.locked .workflow-step-badge {
     background: var(--color-gray-50);
-    border-color: var(--color-gray-200);
+    border-color: var(--color-gray-150, #e9ecef);
+    color: var(--color-gray-300);
+}
+.workflow-step.locked .workflow-step-header {
+    color: var(--color-gray-300);
+}
+.workflow-step.locked .workflow-step-body {
+    display: none;
 }
 
-.workflow-step.done .workflow-step-header {
-    color: var(--color-success-text);
-    background: linear-gradient(to right, #ECFDF5, var(--color-white));
-}
-
+/* Done */
 .workflow-step.done .workflow-step-badge {
-    background: var(--color-success-text);
-    color: var(--color-white);
-    box-shadow: 0 0 8px rgba(6, 95, 70, 0.2);
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    color: #065f46;
 }
-
-.workflow-step.done.workflow-step--editable {
-    opacity: 1;
-    border-color: var(--color-gray-200);
-}
-
-.workflow-step.done.workflow-step--editable .workflow-step-header {
-    color: var(--color-gray-800);
-    background: linear-gradient(to right, #F0FDF4, var(--color-white));
-}
-
-.workflow-step.locked {
-    opacity: 0.5;
-    pointer-events: none;
-    background: var(--color-gray-50);
-}
-
-.workflow-step-summary {
-    font-size: 13px;
+.workflow-step.done .workflow-step-header {
     color: var(--color-gray-600);
+}
+/* Done steps collapse body by default */
+.workflow-step.done:not(.workflow-step--editable) .workflow-step-body {
+    display: none;
+}
+.workflow-step.done.workflow-step--editable .workflow-step-body {
+    display: block;
+}
+
+/* Editable done step */
+.workflow-step.done.workflow-step--editable .workflow-step-badge {
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    color: #065f46;
+}
+
+/* Active */
+.workflow-step.active .workflow-step-badge {
+    background: var(--brand-primary, #4e4ae5);
+    border-color: var(--brand-primary, #4e4ae5);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(78, 74, 229, 0.12);
+}
+.workflow-step.active .workflow-step-header {
+    color: var(--color-gray-900);
+    font-size: 14px;
+}
+
+/* Active step card: subtle elevated panel */
+.workflow-step.active .workflow-step-body {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-150, #e9ecef);
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+}
+
+/* Summary strip */
+.workflow-step-summary {
+    font-size: 12px;
+    color: var(--color-gray-500);
+    padding: 6px 10px;
+    border-radius: 6px;
     background: var(--color-gray-50);
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    border-left: 3px solid var(--color-gray-300);
+    border: 1px solid var(--color-gray-100);
+    display: inline-block;
+    margin-top: 2px;
 }
 
 .workflow-step.done .workflow-step-summary {
-    border-left-color: var(--color-success-text);
-    background: #F0FDF4;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #065f46;
 }
 
 .workflow-step.active .workflow-step-summary {
-    border-left-color: var(--brand-primary);
-    background: var(--brand-primary-ultra);
+    background: var(--brand-primary-ultra, #eef2ff);
+    border-color: var(--brand-primary-light, #c7d2fe);
+    color: var(--brand-primary-dark, #312e81);
 }
 
 /* Sidebar unread badge for Super Admin chat */
@@ -565,23 +622,9 @@
     min-width: 0;
 }
 
-/* Remove double-padding since roadmap-left already pads */
+/* Roadmap-left: timeline fits naturally, just top margin */
 .roadmap-left .workflow-stepper {
-    padding: 0;
     margin-top: var(--space-2);
-}
-
-.roadmap-left .workflow-step {
-    box-shadow: none;
-    border-color: var(--color-gray-100);
-}
-
-.roadmap-left .workflow-step:hover {
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-}
-
-.roadmap-left .workflow-step.active {
-    box-shadow: 0 0 0 1px var(--brand-primary-light);
 }
 
 .roadmap-right {

@@ -152,6 +152,7 @@ def upload_solution(question_id):
         "file_type":         ext,
         "is_locked":         True,
         "uploaded_at":       datetime.utcnow(),
+        "submitted_to_admin_at": None,
         "forwarded_at":      None
     })
     
@@ -189,6 +190,8 @@ def get_file_url(file_id):
         if role == Role.STUDENT and not file.get("forwarded_at"):
             return jsonify({"error": "Access denied. File not shared with student yet."}), 403
         if role in (Role.EMPLOYEE, Role.SUPER_ADMIN):
+            if not file.get("submitted_to_admin_at"):
+                return jsonify({"error": "Access denied. File has not been sent to admin yet."}), 403
             if question and question.get("status") in ("in_progress", "advance_paid", "pending_payment", "awaiting_quote"):
                 return jsonify({"error": "Access denied. Expert has not submitted solution yet."}), 403
         if role == Role.EXPERT:
@@ -272,8 +275,8 @@ def get_files_for_question(question_id):
             if not is_solution:
                 visible = True
             else:
-                # Admin sees expert files only if expert has submitted (status is NOT in_progress/advance_paid)
-                if question.get("status") not in ("in_progress", "advance_paid", "pending_payment", "awaiting_quote"):
+                # Admin sees expert files only after the expert explicitly sends them.
+                if f.get("submitted_to_admin_at"):
                     visible = True
                     
         elif role == Role.EXPERT:
@@ -304,6 +307,7 @@ def get_files_for_question(question_id):
                 "uploader_type":     uploader_role,
                 "category":          f.get("category", "attachment" if not is_solution else "solution"),
                 "uploaded_at":       str(f["uploaded_at"]),
+                "submitted_to_admin_at": str(f["submitted_to_admin_at"]) if f.get("submitted_to_admin_at") else None,
                 "forwarded_at":      str(f["forwarded_at"]) if f.get("forwarded_at") else None
             })
             
