@@ -21,6 +21,7 @@ class Config:
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
     STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
     FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5001")
+    PASSWORD_RESET_FRONTEND_URL = os.environ.get("PASSWORD_RESET_FRONTEND_URL", "https://www.tutorsolve.com")
     API_BASE = os.environ.get("API_BASE", "http://localhost:5000/api")
 
     # Razorpay

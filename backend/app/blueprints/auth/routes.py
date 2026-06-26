@@ -301,11 +301,17 @@ def me():
         db.users.update_one({"_id": user["_id"]}, {"$set": {"role": canonical_role}})
         user["role"] = canonical_role
 
-    return jsonify({
+    response = {
         "id":    str(user["_id"]),
         "email": user["email"],
         "role":  canonical_role
-    }), 200
+    }
+
+    if canonical_role == Role.EMPLOYEE:
+        employee = db.employees.find_one({"user_id": user["_id"]}, {"_id": 1})
+        response["employee_id"] = str(employee["_id"]) if employee else None
+
+    return jsonify(response), 200
 
 
 @auth_bp.route("/profile", methods=["GET"])
@@ -539,14 +545,10 @@ def forgot_password():
     )
 
     frontend_base = (
-        current_app.config.get("FRONTEND_URL")
-        or os.environ.get("FRONTEND_URL")
-        or request.headers.get("Origin")
-        or ""
+        current_app.config.get("PASSWORD_RESET_FRONTEND_URL")
+        or os.environ.get("PASSWORD_RESET_FRONTEND_URL")
+        or "https://www.tutorsolve.com"
     ).rstrip("/")
-    if not frontend_base:
-        # Final local fallback for dev if neither config/env nor Origin is available.
-        frontend_base = "http://localhost:5001"
     reset_link = f"{frontend_base}/auth/reset-password.html?token={raw_token}&email={quote_plus(email)}"
 
     try:

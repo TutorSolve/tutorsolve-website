@@ -171,6 +171,7 @@
 
     const qid = new URLSearchParams(window.location.search).get("id");
     let currentUserId = null;
+    let currentEmployeeId = null;
     var activeOrderId = null;
     let currentRoadmapOrderId = null;
     let currentRoadmapOrder = null;
@@ -191,6 +192,7 @@
     }).then(me => {
       if (!me) return;
       currentUserId = me.id;
+      currentEmployeeId = me.employee_id || null;
       // Open directly after auth — no setTimeout race condition
       if (qid) openOrder(qid);
     }).catch(err => {
@@ -199,6 +201,25 @@
     });
 
     function formatStatus(s) { return s.replace(/_/g, " "); }
+
+    function isOrderClaimedByCurrentEmployee(order) {
+      return !!order.assigned_employee_id
+        && !!currentEmployeeId
+        && String(order.assigned_employee_id) === String(currentEmployeeId);
+    }
+
+    function renderClaimRequiredRoadmap(order) {
+      const panel = document.getElementById("roadmap-left-content");
+      if (!panel) return;
+
+      panel.innerHTML = `
+        ${renderOrderInfoStrip(order)}
+        <div class="roadmap-empty-state">
+          <p style="font-weight:600;color:var(--color-gray-700);">Claim this order to use the roadmap.</p>
+          <p style="font-size:13px;color:var(--color-gray-500);margin-top:4px;">Roadmap actions and interested experts are available after this question is claimed.</p>
+        </div>
+      `;
+    }
 
     async function openOrder(questionId) {
       const isSameOrder = (activeOrderId === questionId);
@@ -212,10 +233,17 @@
         return;
       }
 
-      renderOrderControls(order);
+      const canUseClaimedTools = isOrderClaimedByCurrentEmployee(order);
+      if (canUseClaimedTools) {
+        renderOrderControls(order);
+      } else {
+        renderClaimRequiredRoadmap(order);
+      }
       renderExpertPanel(order);
       activeRoadmapThreadId = order.thread_b_id ? String(order.thread_b_id) : null;
-      loadNotificationDomains(order);
+      if (canUseClaimedTools) {
+        loadNotificationDomains(order);
+      }
 
       // Update headers
       document.getElementById("header-student").textContent = `Student: ${order.student_name || 'Unknown'}`;
@@ -227,7 +255,7 @@
       }
 
       // Handle claiming logic
-      if (!order.assigned_employee_id) {
+      if (!canUseClaimedTools) {
         document.getElementById("chat-a").innerHTML = `
                 <div class="chat-empty" style="background: var(--color-gray-50); height: 100%; justify-content: center;">
                     <p style="font-weight: 600; font-size: 16px; color: var(--color-gray-700);">No Admin Assigned</p>
@@ -337,6 +365,12 @@
 
       if (activeOrderId === questionId) {
         currentRoadmapOrder = order;
+      }
+
+      if (!isOrderClaimedByCurrentEmployee(order)) {
+        renderClaimRequiredRoadmap(order);
+        toast("Claim this order before using the roadmap.", "error");
+        return;
       }
 
       renderOrderControls(order);
@@ -1044,7 +1078,7 @@
       currentRoadmapOrderId = order._id;
       currentRoadmapOrder = order;
 
-      if (!order.assigned_employee_id) {
+      if (!isOrderClaimedByCurrentEmployee(order)) {
         expertsPanel.innerHTML = `<div style="padding:16px; text-align:center; font-size:13px; color:var(--color-gray-500);">Claim this order to view experts.</div>`;
         return;
       }
@@ -1055,6 +1089,10 @@
     async function refreshInterestedExperts() {
       if (!currentRoadmapOrderId || !currentRoadmapOrder) {
         toast("Open an order first.", "error");
+        return;
+      }
+      if (!isOrderClaimedByCurrentEmployee(currentRoadmapOrder)) {
+        toast("Claim this order before viewing interested experts.", "error");
         return;
       }
 

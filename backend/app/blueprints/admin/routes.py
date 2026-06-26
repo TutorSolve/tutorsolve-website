@@ -814,6 +814,9 @@ def interested_experts(question_id):
         return jsonify({"error": "Not found"}), 404
 
     employee = db.employees.find_one({"user_id": oid(uid)})
+    if not employee or str(question.get("assigned_employee_id")) != str(employee["_id"]):
+        return jsonify({"error": "You must claim this question before viewing interested experts."}), 403
+
     emp_user_oid = oid(uid) if employee else None
 
     experts = list(db.experts.find({"_id": {"$in": question.get("interested_expert_ids", [])}}))
@@ -1188,32 +1191,35 @@ def order_detail(question_id):
         fallback_name=question.get("domain")
     )
 
+    can_view_workflow = bool(assigned_id) and str(assigned_id) == str(employee["_id"])
+
     # Get interested experts (anonymized)
     interested = []
-    interest_source_by_expert = {
-        str(item.get("expert_id")): item
-        for item in question.get("expert_interest_sources", [])
-        if item.get("expert_id")
-    }
-    for eid in question.get("interested_expert_ids", []):
-        exp = db.experts.find_one({"_id": eid})
-        if exp:
-            interest_source = interest_source_by_expert.get(str(eid), {})
-            interested.append({
-                "_id":             str(exp["_id"]),
-                "name":            exp["name"],
-                "domain":          _resolve_domain_name(
-                    db,
-                    domain_id=exp.get("domain_id"),
-                    fallback_name=exp.get("domain")
-                ),
-                "quality_score":   exp.get("quality_score", 0),
-                "on_time_rate":    exp.get("on_time_rate", 0),
-                "tasks_completed": exp.get("tasks_completed", 0),
-                "interest_source":  interest_source.get("source"),
-                "interest_domain":  interest_source.get("domain"),
-                "accepted_at":      str(interest_source.get("accepted_at")) if interest_source.get("accepted_at") else None,
-            })
+    if can_view_workflow:
+        interest_source_by_expert = {
+            str(item.get("expert_id")): item
+            for item in question.get("expert_interest_sources", [])
+            if item.get("expert_id")
+        }
+        for eid in question.get("interested_expert_ids", []):
+            exp = db.experts.find_one({"_id": eid})
+            if exp:
+                interest_source = interest_source_by_expert.get(str(eid), {})
+                interested.append({
+                    "_id":             str(exp["_id"]),
+                    "name":            exp["name"],
+                    "domain":          _resolve_domain_name(
+                        db,
+                        domain_id=exp.get("domain_id"),
+                        fallback_name=exp.get("domain")
+                    ),
+                    "quality_score":   exp.get("quality_score", 0),
+                    "on_time_rate":    exp.get("on_time_rate", 0),
+                    "tasks_completed": exp.get("tasks_completed", 0),
+                    "interest_source":  interest_source.get("source"),
+                    "interest_domain":  interest_source.get("domain"),
+                    "accepted_at":      str(interest_source.get("accepted_at")) if interest_source.get("accepted_at") else None,
+                })
 
     return jsonify({
         "_id":              str(question["_id"]),
