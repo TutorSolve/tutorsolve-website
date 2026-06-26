@@ -125,6 +125,34 @@ def _count_expert_unread_messages(db, thread, expert_user_oid):
     return db.messages.count_documents(query)
 
 
+def _expert_can_view_question(question, expert):
+    if not question or not expert:
+        return False
+
+    if question.get("assigned_expert_id") == expert["_id"]:
+        return True
+    if expert["_id"] in question.get("interested_expert_ids", []):
+        return True
+    if expert["_id"] in question.get("manually_notified_expert_ids", []):
+        return True
+
+    expert_domain_id = _to_object_id(expert.get("domain_id"))
+    if expert_domain_id:
+        if question.get("domain_id") == expert_domain_id:
+            return True
+        if expert_domain_id in question.get("additional_domain_ids", []):
+            return True
+
+    expert_domain = (expert.get("domain") or "").strip()
+    question_domain = (question.get("domain") or "").strip()
+    if expert_domain and question_domain and expert_domain.lower() == question_domain.lower():
+        return True
+    if expert_domain and any(expert_domain.lower() == str(name).lower() for name in question.get("additional_domain_names", [])):
+        return True
+
+    return False
+
+
 @expert_bp.route("/dashboard", methods=["GET"])
 @expert_required
 def dashboard():
@@ -245,20 +273,25 @@ def job_board():
         "assigned_expert_id": None,
         "interested_expert_ids": {"$ne": expert["_id"]}
     }
-    
+
+    visibility_clauses = [{"manually_notified_expert_ids": expert["_id"]}]
+
     # Prefer domain_id as source of truth, while keeping legacy string-domain fallback.
     if domain_oid:
-        query["$or"] = [{"domain_id": domain_oid}]
+        visibility_clauses.append({"domain_id": domain_oid})
+        visibility_clauses.append({"additional_domain_ids": domain_oid})
         if domain_name:
             escaped_name = re.escape(domain_name)
-            query["$or"].append({"domain": {"$regex": f"^{escaped_name}$", "$options": "i"}})
+            visibility_clauses.append({"domain": {"$regex": f"^{escaped_name}$", "$options": "i"}})
+            visibility_clauses.append({"additional_domain_names": {"$regex": f"^{escaped_name}$", "$options": "i"}})
     elif domain_name:
         escaped_name = re.escape(domain_name)
-        query["domain"] = {"$regex": f"^{escaped_name}$", "$options": "i"}
+        visibility_clauses.append({"domain": {"$regex": f"^{escaped_name}$", "$options": "i"}})
+        visibility_clauses.append({"additional_domain_names": {"$regex": f"^{escaped_name}$", "$options": "i"}})
     else:
-        # If expert has no domain, they shouldn't see anything? 
-        # Or maybe all jobs? Usually experts are tied to domains.
-        return jsonify([]), 200
+        visibility_clauses = [{"manually_notified_expert_ids": expert["_id"]}]
+
+    query["$or"] = visibility_clauses
 
     questions = list(db.questions.find(query).sort("created_at", -1))
     qids = [q["_id"] for q in questions]
@@ -369,12 +402,45 @@ def express_interest(question_id):
     uid    = get_jwt_identity()
     db     = get_db()
     expert = db.experts.find_one({"user_id": oid(uid)})
-    db.questions.update_one(
-        {"_id": oid(question_id)},
-        {"$addToSet": {"interested_expert_ids": expert["_id"]}}
-    )
 
     question = db.questions.find_one({"_id": oid(question_id)})
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+    if not _expert_can_view_question(question, expert):
+        return jsonify({"error": "This task is not available to your profile."}), 403
+
+    expert_domain_id = _to_object_id(expert.get("domain_id"))
+    if expert["_id"] in question.get("manually_notified_expert_ids", []):
+        interest_source = "manual_expert"
+    elif expert_domain_id and expert_domain_id in question.get("additional_domain_ids", []):
+        interest_source = "manual_domain"
+    elif (expert.get("domain") or "").strip().lower() in [
+        str(name).strip().lower() for name in question.get("additional_domain_names", [])
+    ]:
+        interest_source = "manual_domain"
+    else:
+        interest_source = "primary_domain"
+
+    db.questions.update_one(
+        {"_id": oid(question_id)},
+        {
+            "$addToSet": {"interested_expert_ids": expert["_id"]},
+            "$push": {
+                "expert_interest_sources": {
+                    "expert_id": expert["_id"],
+                    "domain_id": expert.get("domain_id"),
+                    "domain": _resolve_domain_name(
+                        db,
+                        domain_id=expert.get("domain_id"),
+                        fallback_name=expert.get("domain"),
+                    ),
+                    "source": interest_source,
+                    "accepted_at": datetime.utcnow(),
+                }
+            },
+        }
+    )
+
     if question and question.get("assigned_employee_id"):
         employee = db.employees.find_one({"_id": question["assigned_employee_id"]})
         if employee:
@@ -452,8 +518,9 @@ def get_thread(question_id):
 
     is_assigned = question.get("assigned_expert_id") == expert["_id"]
     is_interested = expert["_id"] in question.get("interested_expert_ids", [])
+    is_invited = _expert_can_view_question(question, expert)
     
-    if not is_assigned and not is_interested:
+    if not is_invited:
         return jsonify({"error": "You are not assigned or interested in this task"}), 403
 
     if is_assigned:
@@ -466,7 +533,7 @@ def get_thread(question_id):
             return jsonify({"error": "Thread not found"}), 404
         return jsonify({"thread_id": str(thread["_id"])}), 200
 
-    # If only interested, look for or create Thread N
+    # If interested or manually invited, look for or create Thread N
     thread = db.threads.find_one({
         "question_id": oid(question_id),
         "thread_type": "N",
@@ -633,7 +700,7 @@ def task_detail(question_id):
     # True when the task has an assigned expert but it's not this one
     is_assigned_to_other = bool(question.get("assigned_expert_id")) and not is_assigned
     
-    if not is_assigned and not is_interested:
+    if not _expert_can_view_question(question, expert):
         return jsonify({"error": "You are not assigned or interested in this task"}), 403
 
     domain_name = _resolve_domain_name(

@@ -136,9 +136,11 @@
                 </svg>
                 Interested Experts
               </span>
-              <button class="roadmap-card-refresh" onclick="refreshInterestedExperts()" title="Refresh interested experts" aria-label="Refresh interested experts">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              <button class="roadmap-card-refresh" onclick="refreshInterestedExperts()"
+                title="Refresh interested experts" aria-label="Refresh interested experts">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
                 </svg>
               </button>
             </div>
@@ -175,6 +177,7 @@
     let roadmapExpertsById = {};
     let roadmapExpertIdByThreadId = {};
     let activeRoadmapThreadId = null;
+    let availableDomains = [];
     let roadmapModalExpertId = null;
     let roadmapModalPage = 1;
 
@@ -212,6 +215,7 @@
       renderOrderControls(order);
       renderExpertPanel(order);
       activeRoadmapThreadId = order.thread_b_id ? String(order.thread_b_id) : null;
+      loadNotificationDomains(order);
 
       // Update headers
       document.getElementById("header-student").textContent = `Student: ${order.student_name || 'Unknown'}`;
@@ -671,29 +675,156 @@
     }
 
     function renderAssignmentSectionInner(order) {
+      const alreadyNotifiedDomains = (order.additional_domain_names || []).length
+        ? `<p style="font-size:12px;color:var(--color-gray-500);margin-top:var(--space-2);">Already notified: ${order.additional_domain_names.map(escapeHtml).join(", ")}</p>`
+        : "";
       return `
+            <div style="border:1px solid var(--color-gray-200);border-radius:var(--radius-md);padding:var(--space-4);margin-bottom:var(--space-5);background:var(--color-white);">
+              <div style="display:flex;justify-content:space-between;gap:var(--space-3);align-items:flex-start;flex-wrap:wrap;margin-bottom:var(--space-3);">
+                <div>
+                  <p class="label" style="margin-bottom:4px">Notify Other Domains</p>
+                  <p style="font-size:12px;color:var(--color-gray-500);margin:0;">Invite experts from related domains to view and accept this task.</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="openNotifyDomainsModal('${order._id}')">Notify Other Domains</button>
+              </div>
+              ${alreadyNotifiedDomains}
+            </div>
             <p class="label" style="margin-bottom:var(--space-3)">
                 Search by Expert ID or Name
             </p>
             <div style="display:flex;gap:var(--space-3)">
                 <input id="expert-search" type="text" class="input"
                     placeholder="Expert ID or name..." style="flex:1"
-                    oninput="searchExperts(this.value, '${order.domain}')">
+                    oninput="searchExperts(this.value)">
+            </div>
+            <div style="display:flex;gap:var(--space-4);flex-wrap:wrap;margin-top:var(--space-3);font-size:12px;color:var(--color-gray-600);">
+              <label style="display:flex;align-items:center;gap:6px;"><input id="notify-expert-email" type="checkbox" checked> Email direct invites</label>
+              <label style="display:flex;align-items:center;gap:6px;"><input id="notify-expert-whatsapp" type="checkbox"> WhatsApp request</label>
             </div>
             <div id="expert-search-results" style="margin-top:var(--space-3)"></div>
       `;
     }
 
 
+    async function loadNotificationDomains(order) {
+      if (!availableDomains.length) {
+        const res = await apiFetch("/auth/domains");
+        if (res.ok) {
+          availableDomains = await res.json();
+        }
+      }
+    }
+
+    async function openNotifyDomainsModal(questionId) {
+      if (!currentRoadmapOrder || currentRoadmapOrder._id !== questionId) {
+        toast("Open an order first.", "error");
+        return;
+      }
+
+      await loadNotificationDomains(currentRoadmapOrder);
+      const currentDomain = String(currentRoadmapOrder.domain || "").toLowerCase();
+      const alreadyNotified = new Set((currentRoadmapOrder.additional_domain_ids || []).map(String));
+      const domainOptions = availableDomains
+        .filter((domain) => String(domain.name || "").toLowerCase() !== currentDomain)
+        .map((domain) => `
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--color-gray-200);border-radius:var(--radius-md);background:${alreadyNotified.has(String(domain.id)) ? "var(--color-gray-50)" : "var(--color-white)"};color:${alreadyNotified.has(String(domain.id)) ? "var(--color-gray-400)" : "var(--color-gray-800)"};">
+            <input type="checkbox" class="notify-domain-checkbox" value="${domain.id}" ${alreadyNotified.has(String(domain.id)) ? "disabled" : ""}>
+            <span style="font-size:14px;font-weight:500;">${escapeHtml(domain.name)}</span>
+            ${alreadyNotified.has(String(domain.id)) ? `<span style="margin-left:auto;font-size:11px;color:var(--color-gray-400);">Already notified</span>` : ""}
+          </label>
+        `).join("");
+
+      document.getElementById("notify-domains-modal")?.remove();
+      const modal = document.createElement("div");
+      modal.id = "notify-domains-modal";
+      modal.className = "roadmap-reviews-modal";
+      modal.innerHTML = `
+        <div class="roadmap-reviews-backdrop" onclick="closeNotifyDomainsModal()"></div>
+        <div class="reviews-modal-inner roadmap-reviews-modal-inner" style="max-width:520px;padding:24px;">
+          <div style="display:flex;justify-content:space-between;gap:var(--space-4);align-items:flex-start;margin-bottom:var(--space-4);">
+            <div>
+              <h3 style="margin:0;font-size:18px;color:var(--color-gray-900);">Notify Other Domains</h3>
+              <p style="margin:6px 0 0;font-size:13px;color:var(--color-gray-500);line-height:1.5;">Select one or more related domains. Experts from those domains will see this task in their job board.</p>
+            </div>
+            <button class="roadmap-reviews-close" onclick="closeNotifyDomainsModal()">×</button>
+          </div>
+          <div style="display:grid;gap:8px;max-height:340px;overflow:auto;padding-right:4px;">
+            ${domainOptions || `<p style="font-size:13px;color:var(--color-gray-500);">No other domains available.</p>`}
+          </div>
+          <div style="display:flex;gap:var(--space-4);flex-wrap:wrap;margin-top:var(--space-4);font-size:13px;color:var(--color-gray-600);">
+            <label style="display:flex;align-items:center;gap:6px;"><input id="notify-domain-email" type="checkbox" checked> Email</label>
+            <label style="display:flex;align-items:center;gap:6px;"><input id="notify-domain-whatsapp" type="checkbox"> WhatsApp request</label>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:var(--space-3);padding-top:var(--space-4);border-top:1px solid var(--color-gray-100);margin-top:var(--space-4);">
+            <button class="btn btn-secondary" onclick="closeNotifyDomainsModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="notifySelectedDomains('${questionId}')">Notify Selected</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeNotifyDomainsModal() {
+      document.getElementById("notify-domains-modal")?.remove();
+      document.body.style.overflow = "";
+    }
+
+    async function notifySelectedDomains(questionId) {
+      const domainIds = Array.from(document.querySelectorAll(".notify-domain-checkbox:checked"))
+        .map((checkbox) => checkbox.value);
+
+      if (!domainIds.length) {
+        toast("Select at least one related domain.", "error");
+        return;
+      }
+
+      const res = await apiFetch(`/admin/orders/${questionId}/notify-domains`, {
+        method: "POST",
+        body: JSON.stringify({
+          domain_ids: domainIds,
+          send_email: document.getElementById("notify-domain-email")?.checked !== false,
+          send_whatsapp: !!document.getElementById("notify-domain-whatsapp")?.checked,
+        })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        toast(`Notified ${data.notified_count} expert${data.notified_count === 1 ? "" : "s"}.`);
+        closeNotifyDomainsModal();
+        openOrder(questionId);
+      } else {
+        toast(data.error || "Failed to notify domains.", "error");
+      }
+    }
+
+    async function notifySpecificExpert(questionId, expertId) {
+      const res = await apiFetch(`/admin/orders/${questionId}/notify-experts`, {
+        method: "POST",
+        body: JSON.stringify({
+          expert_ids: [expertId],
+          send_email: document.getElementById("notify-expert-email")?.checked !== false,
+          send_whatsapp: !!document.getElementById("notify-expert-whatsapp")?.checked,
+        })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        toast(data.notified_count ? "Expert notified." : "Expert was already notified or unavailable.");
+      } else {
+        toast(data.error || "Failed to notify expert.", "error");
+      }
+    }
+
 
     let searchTimeout = null;
-    async function searchExperts(query, domain) {
+    async function searchExperts(query) {
       clearTimeout(searchTimeout);
       if (!query.trim()) {
         document.getElementById("expert-search-results").innerHTML = ""; return;
       }
       searchTimeout = setTimeout(async () => {
-        const res = await apiFetch(`/admin/experts/search?q=${encodeURIComponent(query)}&domain=${domain}`);
+        const res = await apiFetch(`/admin/experts/search?q=${encodeURIComponent(query)}`);
         const experts = await res.json();
         experts.forEach(expert => {
           roadmapExpertsById[expert._id] = expert;
@@ -708,9 +839,14 @@
                             ${e.domain} · ⭐ ${e.quality_score}/5
                         </p>
                     </div>
-                    <button class="btn btn-secondary btn-sm" onclick="assignExpert('${activeOrderId}', '${e._id}')">
-                        Assign
-                    </button>
+                    <div style="display:flex;gap:var(--space-2);align-items:center;">
+                      <button class="btn btn-secondary btn-sm" onclick="notifySpecificExpert('${activeOrderId}', '${e._id}')">
+                          Notify
+                      </button>
+                      <button class="btn btn-primary btn-sm" onclick="assignExpert('${activeOrderId}', '${e._id}')">
+                          Assign
+                      </button>
+                    </div>
                 </div>
             `).join("") || `<p style="font-size:13px;color:var(--color-gray-500)">No experts found.</p>`;
       }, 400);
@@ -1221,10 +1357,14 @@
             const unreadBadge = e.unread_count > 0
               ? `<span class="roadmap-expert-unread-badge" data-expert-unread="${e._id}">${e.unread_count}</span>`
               : "";
+            const sourceLabel = e.interest_source === "manual_domain"
+              ? "Related domain invite"
+              : (e.interest_source === "manual_expert" ? "Direct invite" : "Primary domain");
             return `
               <div class="roadmap-expert-card" data-expert-id="${e._id}" onclick="openNegotiationChat('${questionId}', '${e._id}', '${e.name.replace(/'/g, "\\'")}')" style="cursor:pointer; transition: background 0.2s;">
                 <div class="roadmap-expert-info">
                   <div class="roadmap-expert-name">${e.name}</div>
+                  <div style="font-size:11px;color:var(--color-gray-500);margin-top:2px;">${escapeHtml(e.interest_domain || e.domain || "")} · ${sourceLabel}</div>
                 </div>
                 <div class="roadmap-expert-actions" data-expert-actions="${e._id}">
                   ${unreadBadge}

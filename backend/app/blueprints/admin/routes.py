@@ -51,6 +51,86 @@ def _resolve_domain_name(db, domain_id=None, fallback_name=None, domain_name_map
     return domain_name
 
 
+def _question_domain_invite_query(question):
+    domain_id = question.get("domain_id")
+    domain_name = question.get("domain")
+    query = {}
+    if domain_id:
+        query["$or"] = [{"domain_id": oid(domain_id)}]
+        if domain_name:
+            query["$or"].append({"domain": {"$regex": f"^{re.escape(domain_name)}$", "$options": "i"}})
+    elif domain_name:
+        query["domain"] = {"$regex": f"^{re.escape(domain_name)}$", "$options": "i"}
+    return query
+
+
+def _notify_experts_for_question(db, question, experts, source, source_label, employee=None, send_email=True, send_whatsapp=False):
+    from app.tasks.notification_tasks import send_notification_async
+    from app.services.email_service import send_expert_broadcast_email
+
+    notified = []
+    skipped = 0
+    domain_name = _resolve_domain_name(
+        db,
+        domain_id=question.get("domain_id"),
+        fallback_name=question.get("domain"),
+    )
+
+    for expert in experts:
+        user = db.users.find_one({"_id": expert.get("user_id")})
+        if not user:
+            skipped += 1
+            continue
+
+        link = "/expert/job-board.html"
+        try:
+            send_notification_async.delay(
+                user_id=str(user["_id"]),
+                notif_type="expert_broadcast",
+                title=f"New {source_label} task",
+                body=question.get("title", "New task available"),
+                link=link,
+            )
+        except Exception as exc:
+            print(f"[ERROR] additional expert notification failed for {expert.get('_id')}: {exc}")
+
+        if send_email and user.get("email"):
+            try:
+                send_expert_broadcast_email(
+                    user["email"],
+                    expert.get("name", "Expert"),
+                    source_label or domain_name or "Assignment",
+                    question.get("title", "New task"),
+                    str(question["_id"]),
+                )
+            except Exception as exc:
+                print(f"[ERROR] additional expert email failed for {expert.get('_id')}: {exc}")
+
+        notified.append(expert["_id"])
+
+    audit_entries = [
+        {
+            "expert_id": expert_id,
+            "source": source,
+            "source_label": source_label,
+            "employee_id": employee["_id"] if employee else None,
+            "send_email": bool(send_email),
+            "send_whatsapp": bool(send_whatsapp),
+            "whatsapp_status": "requested_not_configured" if send_whatsapp else None,
+            "created_at": datetime.utcnow(),
+        }
+        for expert_id in notified
+    ]
+
+    if audit_entries:
+        db.questions.update_one(
+            {"_id": question["_id"]},
+            {"$push": {"expert_notification_audit": {"$each": audit_entries}}},
+        )
+
+    return {"notified": notified, "skipped": skipped}
+
+
 def _super_admin_display_name(user_doc):
     if not user_doc:
         return "Super Admin"
@@ -739,8 +819,14 @@ def interested_experts(question_id):
     experts = list(db.experts.find({"_id": {"$in": question.get("interested_expert_ids", [])}}))
     result  = []
     domain_name_map = _get_domain_name_map(db, [e.get("domain_id") for e in experts])
+    interest_source_by_expert = {
+        str(item.get("expert_id")): item
+        for item in question.get("expert_interest_sources", [])
+        if item.get("expert_id")
+    }
 
     for e in experts:
+        interest_source = interest_source_by_expert.get(str(e["_id"]), {})
         # Check Thread N for unread messages from this expert
         unread_count = 0
         thread_n = db.threads.find_one({
@@ -769,8 +855,174 @@ def interested_experts(question_id):
             "qualifications":  e.get("qualifications", ""),
             "unread_count":    unread_count,
             "thread_id":       str(thread_n["_id"]) if thread_n else None,
+            "interest_source":  interest_source.get("source"),
+            "interest_domain":  interest_source.get("domain"),
+            "accepted_at":      str(interest_source.get("accepted_at")) if interest_source.get("accepted_at") else None,
         })
     return jsonify(result), 200
+
+
+@admin_bp.route("/orders/<question_id>/notify-domains", methods=["POST"])
+@admin_required
+def notify_additional_domains(question_id):
+    data = request.get_json() or {}
+    domain_ids = data.get("domain_ids") or []
+    send_email = data.get("send_email", True)
+    send_whatsapp = data.get("send_whatsapp", False)
+
+    if not isinstance(domain_ids, list) or not domain_ids:
+        return jsonify({"error": "Select at least one domain."}), 400
+
+    db = get_db()
+    uid = get_jwt_identity()
+    employee = db.employees.find_one({"user_id": oid(uid)})
+    if not employee:
+        return jsonify({"error": "Employee record not found"}), 404
+
+    question = db.questions.find_one({"_id": oid(question_id)})
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+
+    assigned_id = question.get("assigned_employee_id")
+    if assigned_id and str(assigned_id) != str(employee["_id"]):
+        return jsonify({"error": "Access denied. This order is assigned to another admin."}), 403
+
+    parsed_domain_ids = []
+    for domain_id in domain_ids:
+        try:
+            parsed_domain_ids.append(oid(domain_id))
+        except Exception:
+            return jsonify({"error": "Invalid domain selected."}), 400
+
+    domains = list(db.domains.find({"_id": {"$in": parsed_domain_ids}, "is_active": {"$ne": False}}))
+    if not domains:
+        return jsonify({"error": "No active domains found."}), 404
+
+    domain_ids_found = [d["_id"] for d in domains]
+    domain_names = [d.get("name") for d in domains if d.get("name")]
+    already_notified_experts = set(question.get("manually_notified_expert_ids", []))
+    already_interested = set(question.get("interested_expert_ids", []))
+    assigned_expert_id = question.get("assigned_expert_id")
+
+    domain_name_clauses = [
+        {"domain": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}
+        for name in domain_names
+    ]
+    experts = list(db.experts.find({
+        "kyc_status": "approved",
+        "$or": [{"domain_id": {"$in": domain_ids_found}}] + domain_name_clauses,
+    }))
+    experts_to_notify = [
+        expert for expert in experts
+        if expert["_id"] not in already_notified_experts
+        and expert["_id"] not in already_interested
+        and expert["_id"] != assigned_expert_id
+    ]
+
+    result = _notify_experts_for_question(
+        db,
+        question,
+        experts_to_notify,
+        source="manual_domain",
+        source_label=", ".join(domain_names) or "related domain",
+        employee=employee,
+        send_email=bool(send_email),
+        send_whatsapp=bool(send_whatsapp),
+    )
+
+    update = {
+        "$addToSet": {
+            "additional_domain_ids": {"$each": domain_ids_found},
+            "additional_domain_names": {"$each": domain_names},
+        },
+        "$set": {"updated_at": datetime.utcnow()},
+    }
+    if result["notified"]:
+        update["$addToSet"]["manually_notified_expert_ids"] = {"$each": result["notified"]}
+
+    db.questions.update_one({"_id": question["_id"]}, update)
+
+    return jsonify({
+        "status": "ok",
+        "domains": [{"id": str(d["_id"]), "name": d.get("name")} for d in domains],
+        "notified_count": len(result["notified"]),
+        "skipped_count": result["skipped"] + (len(experts) - len(experts_to_notify)),
+        "whatsapp_status": "requested_not_configured" if send_whatsapp else "not_requested",
+    }), 200
+
+
+@admin_bp.route("/orders/<question_id>/notify-experts", methods=["POST"])
+@admin_required
+def notify_specific_experts(question_id):
+    data = request.get_json() or {}
+    expert_ids = data.get("expert_ids") or []
+    send_email = data.get("send_email", True)
+    send_whatsapp = data.get("send_whatsapp", False)
+
+    if not isinstance(expert_ids, list) or not expert_ids:
+        return jsonify({"error": "Select at least one expert."}), 400
+
+    db = get_db()
+    uid = get_jwt_identity()
+    employee = db.employees.find_one({"user_id": oid(uid)})
+    if not employee:
+        return jsonify({"error": "Employee record not found"}), 404
+
+    question = db.questions.find_one({"_id": oid(question_id)})
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+
+    assigned_id = question.get("assigned_employee_id")
+    if assigned_id and str(assigned_id) != str(employee["_id"]):
+        return jsonify({"error": "Access denied. This order is assigned to another admin."}), 403
+
+    parsed_expert_ids = []
+    for expert_id in expert_ids:
+        try:
+            parsed_expert_ids.append(oid(expert_id))
+        except Exception:
+            return jsonify({"error": "Invalid expert selected."}), 400
+
+    experts = list(db.experts.find({"_id": {"$in": parsed_expert_ids}, "kyc_status": "approved"}))
+    if not experts:
+        return jsonify({"error": "No approved experts found."}), 404
+
+    already_notified = set(question.get("manually_notified_expert_ids", []))
+    already_interested = set(question.get("interested_expert_ids", []))
+    assigned_expert_id = question.get("assigned_expert_id")
+    experts_to_notify = [
+        expert for expert in experts
+        if expert["_id"] not in already_notified
+        and expert["_id"] not in already_interested
+        and expert["_id"] != assigned_expert_id
+    ]
+
+    result = _notify_experts_for_question(
+        db,
+        question,
+        experts_to_notify,
+        source="manual_expert",
+        source_label="direct invite",
+        employee=employee,
+        send_email=bool(send_email),
+        send_whatsapp=bool(send_whatsapp),
+    )
+
+    if result["notified"]:
+        db.questions.update_one(
+            {"_id": question["_id"]},
+            {
+                "$addToSet": {"manually_notified_expert_ids": {"$each": result["notified"]}},
+                "$set": {"updated_at": datetime.utcnow()},
+            },
+        )
+
+    return jsonify({
+        "status": "ok",
+        "notified_count": len(result["notified"]),
+        "skipped_count": result["skipped"] + (len(experts) - len(experts_to_notify)),
+        "whatsapp_status": "requested_not_configured" if send_whatsapp else "not_requested",
+    }), 200
 
 
 
@@ -938,9 +1190,15 @@ def order_detail(question_id):
 
     # Get interested experts (anonymized)
     interested = []
+    interest_source_by_expert = {
+        str(item.get("expert_id")): item
+        for item in question.get("expert_interest_sources", [])
+        if item.get("expert_id")
+    }
     for eid in question.get("interested_expert_ids", []):
         exp = db.experts.find_one({"_id": eid})
         if exp:
+            interest_source = interest_source_by_expert.get(str(eid), {})
             interested.append({
                 "_id":             str(exp["_id"]),
                 "name":            exp["name"],
@@ -952,6 +1210,9 @@ def order_detail(question_id):
                 "quality_score":   exp.get("quality_score", 0),
                 "on_time_rate":    exp.get("on_time_rate", 0),
                 "tasks_completed": exp.get("tasks_completed", 0),
+                "interest_source":  interest_source.get("source"),
+                "interest_domain":  interest_source.get("domain"),
+                "accepted_at":      str(interest_source.get("accepted_at")) if interest_source.get("accepted_at") else None,
             })
 
     return jsonify({
@@ -994,6 +1255,9 @@ def order_detail(question_id):
             "uploaded_at":       str(f["uploaded_at"]),
         } for f in files],
         "interested_experts": interested,
+        "additional_domain_ids": [str(domain_id) for domain_id in question.get("additional_domain_ids", [])],
+        "additional_domain_names": question.get("additional_domain_names", []),
+        "manually_notified_expert_ids": [str(expert_id) for expert_id in question.get("manually_notified_expert_ids", [])],
         "student_name":     student_name,
         "expert_name":      expert_name,
         "created_at":       str(question["created_at"]),

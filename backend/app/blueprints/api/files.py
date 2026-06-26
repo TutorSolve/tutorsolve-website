@@ -15,6 +15,32 @@ from app.utils.constants import Role
 from app.utils.helpers import oid
 from app.services.file_service import upload_to_s3, get_signed_url
 
+
+def _expert_can_view_question_files(question, expert):
+    if not question or not expert:
+        return False
+    if question.get("assigned_expert_id") == expert["_id"]:
+        return True
+    if expert["_id"] in question.get("interested_expert_ids", []):
+        return True
+    if expert["_id"] in question.get("manually_notified_expert_ids", []):
+        return True
+
+    expert_domain_id = expert.get("domain_id")
+    if expert_domain_id:
+        if question.get("domain_id") == expert_domain_id:
+            return True
+        if expert_domain_id in question.get("additional_domain_ids", []):
+            return True
+
+    expert_domain = (expert.get("domain") or "").strip().lower()
+    if expert_domain and (question.get("domain") or "").strip().lower() == expert_domain:
+        return True
+    if expert_domain and any(expert_domain == str(name).strip().lower() for name in question.get("additional_domain_names", [])):
+        return True
+
+    return False
+
 @api_bp.route("/files/upload", methods=["POST"])
 @student_required
 def upload_student_file():
@@ -156,13 +182,7 @@ def get_file_url(file_id):
 
     if not is_solution and role == Role.EXPERT:
         expert_p = db.experts.find_one({"user_id": oid(uid)})
-        can_view_question = bool(
-            expert_p and question and (
-                question.get("assigned_expert_id") == expert_p["_id"]
-                or expert_p["_id"] in question.get("interested_expert_ids", [])
-            )
-        )
-        if not can_view_question:
+        if not _expert_can_view_question_files(question, expert_p):
             return jsonify({"error": "Access denied. You are not assigned or interested in this task."}), 403
 
     if is_solution:
@@ -234,13 +254,7 @@ def get_files_for_question(question_id):
     expert_profile = None
     if role == Role.EXPERT:
         expert_profile = db.experts.find_one({"user_id": oid(uid)})
-        can_view_question = bool(
-            expert_profile and (
-                question.get("assigned_expert_id") == expert_profile["_id"]
-                or expert_profile["_id"] in question.get("interested_expert_ids", [])
-            )
-        )
-        if not can_view_question:
+        if not _expert_can_view_question_files(question, expert_profile):
             return jsonify({"error": "Access denied. You are not assigned or interested in this task."}), 403
         
     files = list(db.files.find({"question_id": oid(question_id)}))
