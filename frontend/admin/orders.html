@@ -313,7 +313,7 @@
       function setFilter(val) {
         activeFilter = val;
         renderFilters();
-        renderOrders();
+        loadOrders();
       }
 
       function statusLabel(s) {
@@ -394,8 +394,16 @@
       }
 
       async function loadOrders() {
-        const res = await apiFetch("/admin/orders");
         const list = document.getElementById("orders-list");
+        list.innerHTML = `<p style="color: var(--color-gray-500)">Loading orders...</p>`;
+
+        const params = new URLSearchParams();
+        const statuses = FILTER_STATUSES[activeFilter];
+        if (statuses && statuses.length) {
+          params.set("status", statuses.join(","));
+        }
+
+        const res = await apiFetch(`/admin/orders?${params.toString()}`);
 
         if (!res.ok) {
           list.innerHTML = `<p style="color:var(--color-danger)">Failed to load orders</p>`;

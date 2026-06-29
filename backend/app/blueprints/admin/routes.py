@@ -258,20 +258,40 @@ def orders():
     
     if payment_status == "advance_paid":
         # Find all questions that have a confirmed advance payment
-        paid_payments = list(db.payments.find({"advance_paid": True}, {"question_id": 1}))
+        paid_payments = list(db.payments.find({"advance_paid": True}, {"question_id": 1, "_id": 0}))
         paid_qids = [p["question_id"] for p in paid_payments]
         query["_id"] = {"$in": paid_qids}
 
-    questions = list(db.questions.find(query).sort("created_at", -1).limit(100))
+    question_projection = {
+        "title": 1,
+        "domain": 1,
+        "domain_id": 1,
+        "status": 1,
+        "student_price": 1,
+        "student_currency": 1,
+        "expert_currency": 1,
+        "price_approved": 1,
+        "assigned_employee_id": 1,
+        "assigned_expert_id": 1,
+        "created_at": 1,
+    }
+    questions = list(db.questions.find(query, question_projection).sort("created_at", -1).limit(100))
     result    = []
 
     domain_name_map = _get_domain_name_map(db, [q.get("domain_id") for q in questions])
+    question_ids = [q["_id"] for q in questions]
+    thread_a_question_ids = set()
+    if question_ids:
+        thread_a_question_ids = {
+            t["question_id"]
+            for t in db.threads.find(
+                {"question_id": {"$in": question_ids}, "thread_type": "A"},
+                {"question_id": 1, "_id": 0},
+            )
+        }
 
     for q in questions:
-        has_thread_a = db.threads.count_documents({
-            "question_id": q["_id"],
-            "thread_type": "A"
-        }, limit=1) > 0
+        has_thread_a = q["_id"] in thread_a_question_ids
 
         result.append({
             "_id":            str(q["_id"]),

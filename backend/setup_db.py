@@ -36,6 +36,18 @@ def setup_indexes(db):
     db.questions.create_index("status")
     db.questions.create_index("domain")
     db.questions.create_index("assigned_expert_id")
+    db.questions.create_index(
+        [("assigned_employee_id", 1), ("created_at", -1)],
+        name="questions_employee_created_idx"
+    )
+    db.questions.create_index(
+        [("assigned_employee_id", 1), ("status", 1), ("created_at", -1)],
+        name="questions_employee_status_created_idx"
+    )
+    db.questions.create_index(
+        [("status", 1), ("created_at", -1)],
+        name="questions_status_created_idx"
+    )
     print("questions: indexes")
 
     db.threads.create_index("question_id")
@@ -46,6 +58,10 @@ def setup_indexes(db):
     print("messages: index")
 
     db.payments.create_index([("question_id", 1)], unique=True)
+    db.payments.create_index(
+        [("advance_paid", 1), ("question_id", 1)],
+        name="payments_advance_paid_question_idx"
+    )
     db.payments.create_index([("completion_paid", 1), ("completion_paid_at", 1), ("payout_released", 1)])
     db.payments.create_index(
         [("status", 1), ("refund_requested_at", -1)],
