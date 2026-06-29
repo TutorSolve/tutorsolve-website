@@ -544,6 +544,43 @@
         return value > 99 ? "99+" : String(value);
       }
 
+      function renderExpertDocumentLinks(expert) {
+        const docs = [
+          { label: "Resume", url: expert?.cv_url },
+          { label: "ID Proof", url: expert?.id_proof_url },
+        ];
+        const availableDocs = docs.filter((doc) => doc.url);
+
+        if (!availableDocs.length) {
+          return `
+            <div class="expert-chat-documents">
+              <span class="expert-chat-documents-label">Documents</span>
+              <span class="expert-chat-document-empty">Not uploaded</span>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="expert-chat-documents">
+            <span class="expert-chat-documents-label">Documents</span>
+            ${availableDocs
+              .map(
+                (doc) => `
+                  <a
+                    class="expert-chat-document-link"
+                    href="${escapeHtml(doc.url)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ${escapeHtml(doc.label)}
+                  </a>
+                `,
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
       async function markSuperAdminThreadRead(threadId) {
         if (!threadId) return;
         try {
@@ -767,6 +804,7 @@
                 <span class="expert-chat-meta-chip">${escapeHtml(domain)}</span>
                 <span class="expert-chat-meta-chip ${kycChipClass(selectedExpertData.kyc_status)}">KYC: ${escapeHtml(kycLabel(selectedExpertData.kyc_status))}</span>
               </div>
+              ${renderExpertDocumentLinks(selectedExpertData)}
             </div>
             <div class="expert-chat-actions">
               <span id="chat-status" class="expert-chat-header-sub"></span>

@@ -135,6 +135,18 @@ def _expert_display_name(expert_doc, user_doc):
     )
 
 
+def _expert_document_links(expert_doc):
+    from app.services.file_service import get_signed_url
+
+    if not expert_doc:
+        return {"cv_url": None, "id_proof_url": None}
+
+    return {
+        "cv_url": get_signed_url(expert_doc["cv_url"]) if expert_doc.get("cv_url") else None,
+        "id_proof_url": get_signed_url(expert_doc["id_proof_url"]) if expert_doc.get("id_proof_url") else None,
+    }
+
+
 def _batch_thread_data(db, thread_ids, threads_list, super_admin_user_oid):
     """
     Given a list of thread ObjectIds and the full thread documents, return:
@@ -217,7 +229,7 @@ def _build_expert_chat_item(db, expert_doc, user_doc, super_admin_user_oid=None)
         else:
             last_message_at = _as_iso(thread.get("updated_at") or thread.get("created_at"))
 
-    return {
+    item = {
         "expert_id": str(expert_doc["_id"]),
         "user_id": str(user_doc["_id"]),
         "name": _expert_display_name(expert_doc, user_doc),
@@ -236,6 +248,8 @@ def _build_expert_chat_item(db, expert_doc, user_doc, super_admin_user_oid=None)
         "last_message_at": last_message_at,
         "unread_count": unread_count,
     }
+    item.update(_expert_document_links(expert_doc))
+    return item
 
 
 def _employee_display_name(employee_doc, user_doc):
@@ -1857,8 +1871,66 @@ def search_employees_spy():
             
             combined.append({
                 "id": emp_id_str,
+                "user_id": str(emp.get("user_id")) if emp.get("user_id") else None,
                 "name": emp.get("name", "Unknown"),
                 "email": email
             })
 
     return jsonify(combined[:10]), 200
+
+
+@super_admin_bp.route("/spy/employees/<employee_id>/orders", methods=["GET"])
+@superadmin_required
+def spy_employee_orders(employee_id):
+    db = get_db()
+    try:
+        employee_oid = oid(employee_id)
+    except Exception:
+        return jsonify({"error": "Invalid employee id"}), 400
+
+    employee = db.employees.find_one({"_id": employee_oid})
+    if not employee:
+        return jsonify({"error": "Employee not found"}), 404
+
+    user = db.users.find_one({"_id": employee.get("user_id")})
+    orders = list(
+        db.questions.find({"assigned_employee_id": employee["_id"]})
+        .sort("created_at", -1)
+        .limit(300)
+    )
+
+    result = []
+    for question in orders:
+        student_thread = db.threads.find_one({
+            "question_id": question["_id"],
+            "thread_type": "A",
+        })
+        expert_thread = db.threads.find_one({
+            "question_id": question["_id"],
+            "thread_type": "B",
+        })
+
+        result.append({
+            "question_id": str(question["_id"]),
+            "title": question.get("title", "Untitled Question"),
+            "description": question.get("description"),
+            "status": question.get("status", ""),
+            "domain": _resolve_domain_name(
+                db,
+                domain_id=question.get("domain_id"),
+                fallback_name=question.get("domain"),
+            ),
+            "created_at": _as_iso(question.get("created_at")),
+            "student_thread_id": str(student_thread["_id"]) if student_thread else None,
+            "expert_thread_id": str(expert_thread["_id"]) if expert_thread else None,
+        })
+
+    return jsonify({
+        "employee": {
+            "id": str(employee["_id"]),
+            "user_id": str(employee.get("user_id")) if employee.get("user_id") else None,
+            "name": employee.get("name", "Unknown"),
+            "email": user.get("email", "") if user else "",
+        },
+        "orders": result,
+    }), 200

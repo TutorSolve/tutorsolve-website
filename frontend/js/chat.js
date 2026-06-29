@@ -280,6 +280,13 @@ function _renderHistory(messages, containerId, userId) {
     return;
   }
   container.innerHTML = "";
+  if (container.dataset.spyMode === "true") {
+    delete container.dataset.leftSenderId;
+  }
+  if (!messages.length && container.dataset.emptyMessage) {
+    container.innerHTML = `<div class="spy-empty">${container.dataset.emptyMessage}</div>`;
+    return;
+  }
   messages.forEach((msg) => _renderBubble(msg, containerId, userId));
   _scrollBottom(containerId);
 }
@@ -288,9 +295,20 @@ function _renderBubble(msg, containerId, userId) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const isMine = msg.sender_user_id === userId;
+  const isSpyMode = container.dataset.spyMode === "true";
+  if (isSpyMode) {
+    container.querySelector(".spy-empty")?.remove();
+  }
+  if (isSpyMode && !container.dataset.rightSenderId && !container.dataset.leftSenderId) {
+    container.dataset.leftSenderId = msg.sender_user_id;
+  }
+  const isMine = isSpyMode
+    ? msg.sender_user_id === container.dataset.rightSenderId ||
+      (!container.dataset.rightSenderId &&
+        msg.sender_user_id !== container.dataset.leftSenderId)
+    : msg.sender_user_id === userId;
   const wrap = document.createElement("div");
-  wrap.className = `chat-bubble ${isMine ? "chat-bubble--mine" : "chat-bubble--theirs"}`;
+  wrap.className = `chat-bubble ${isMine ? "chat-bubble--mine" : "chat-bubble--theirs"} ${isSpyMode ? "chat-bubble--spy" : ""}`;
 
   const text = document.createElement("p");
   text.className = "chat-bubble__text";

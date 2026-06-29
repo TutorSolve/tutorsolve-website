@@ -466,6 +466,51 @@
     color: #991b1b;
 }
 
+.expert-chat-documents {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.expert-chat-documents-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.expert-chat-document-link,
+.expert-chat-document-empty {
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.expert-chat-document-link {
+    border: 1px solid var(--brand-primary-light);
+    color: var(--brand-primary);
+    background: var(--brand-primary-ultra);
+    text-decoration: none;
+}
+
+.expert-chat-document-link:hover {
+    border-color: var(--brand-primary);
+    background: var(--color-white);
+}
+
+.expert-chat-document-empty {
+    background: var(--color-gray-100);
+    color: var(--color-gray-500);
+}
+
 .expert-chat-actions {
     display: flex;
     gap: var(--space-2);
@@ -607,11 +652,174 @@
 }
 
 /* Chat spy */
+.chat-spy-body {
+    overflow: hidden;
+}
+
+.chat-spy-body .dashboard-main {
+    overflow: hidden;
+}
+
+.chat-spy-body .dashboard-main-inner {
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-spy-body .page-header {
+    flex: 0 0 auto;
+    margin-bottom: var(--space-4);
+}
+
+.spy-workspace {
+    display: grid;
+    grid-template-columns: 280px minmax(360px, 1fr) minmax(420px, 1.15fr);
+    gap: var(--space-4);
+    flex: 1;
+    min-height: 0;
+}
+
+.spy-panel {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.spy-panel-header {
+    min-height: 76px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-white);
+}
+
+.spy-panel-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-gray-900);
+}
+
+.spy-panel-header p {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.spy-search {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+}
+
+.spy-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.spy-list-item {
+    width: 100%;
+    display: block;
+    padding: var(--space-4);
+    border: 0;
+    border-bottom: 1px solid var(--color-gray-100);
+    background: var(--color-white);
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.spy-list-item:hover {
+    background: var(--color-gray-50);
+}
+
+.spy-list-item.active {
+    background: var(--brand-primary-ultra);
+    border-left: 3px solid var(--brand-primary);
+    padding-left: calc(var(--space-4) - 3px);
+}
+
+.spy-list-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-gray-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.spy-list-sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.spy-order {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.spy-order h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-gray-900);
+    line-height: 1.35;
+}
+
+.spy-order-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.spy-order-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.spy-order-actions .btn {
+    min-width: 140px;
+}
+
+.spy-chat-panel {
+    min-height: 0;
+}
+
 .chat-messages-area {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
     padding: var(--space-4);
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .chat-panel-header {
@@ -623,6 +831,65 @@
     letter-spacing: .05em;
     text-transform: uppercase;
     color: var(--color-gray-500);
+}
+
+.spy-readonly-note {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-gray-100);
+    background: var(--color-gray-50);
+    font-size: 12px;
+    color: var(--color-gray-500);
+    text-align: center;
+}
+
+.spy-empty {
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+    text-align: center;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+#spy-messages .chat-bubble {
+    max-width: min(74%, 560px);
+}
+
+#spy-messages .chat-bubble--theirs {
+    align-self: flex-start;
+}
+
+#spy-messages .chat-bubble--mine {
+    align-self: flex-end;
+}
+
+#spy-messages .chat-bubble--theirs .chat-bubble__text {
+    background: #eef2ff;
+    color: #312e81;
+    border: 1px solid #c7d2fe;
+}
+
+#spy-messages .chat-bubble--mine .chat-bubble__text {
+    background: #dcfce7;
+    color: #14532d;
+    border: 1px solid #86efac;
+}
+
+#spy-messages .chat-bubble__time {
+    color: var(--color-gray-500);
+}
+
+@media (max-width: 1240px) {
+    .spy-workspace {
+        grid-template-columns: 300px minmax(360px, 1fr);
+    }
+
+    .spy-chat-panel {
+        grid-column: 1 / -1;
+        min-height: 0;
+    }
 }
 
 /* Empty state */
@@ -664,6 +931,16 @@
 
     .dashboard-main-inner {
         padding: var(--space-6);
+    }
+
+    .spy-workspace {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+    }
+
+    .spy-panel,
+    .spy-chat-panel {
+        min-height: 360px;
     }
 
     .users-main-inner.expert-mode {

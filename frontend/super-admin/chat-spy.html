@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
   </head>
 
-  <body>
+  <body class="chat-spy-body">
     <div class="dashboard-layout">
       <!-- Sidebar -->
       <aside class="sidebar">
@@ -164,88 +164,77 @@
             <div>
               <h1 class="page-title">Chat Spy</h1>
               <p class="page-subtitle">
-                Read-only access to any active thread. You are invisible —
-                participants are not notified.
+                Search an employee, choose an assigned order, then open the
+                student or expert thread in read-only mode.
               </p>
             </div>
           </div>
 
-          <!-- Thread picker & Search -->
-          <div
-            style="
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: var(--space-6);
-              margin-bottom: var(--space-6);
-            "
-          >
-            <!-- Search Employee -->
-            <div class="card">
-              <p class="label" style="margin-bottom: var(--space-3)">
-                Search by Employee Name or Email
-              </p>
-              <div
-                style="display: flex; gap: var(--space-3); position: relative"
-              >
+          <div class="spy-workspace">
+            <section class="spy-panel">
+              <div class="spy-panel-header">
+                <div>
+                  <h2>Employees</h2>
+                  <p>Search by name or email.</p>
+                </div>
+              </div>
+              <div class="spy-search">
                 <input
-                  type="text"
+                  type="search"
                   id="emp-search"
                   class="input"
-                  style="flex: 1"
-                  placeholder="John Doe or employee@example.com"
+                  placeholder="Name or email"
                   oninput="handleEmployeeSearchInput()"
                   autocomplete="off"
                 />
-                <button
-                  class="btn btn-secondary btn-md"
-                  onclick="searchEmployeeQuestions()"
-                >
-                  Search
-                </button>
               </div>
-            </div>
-          </div>
+              <div id="employee-results" class="spy-list">
+                <div class="spy-empty">Start typing to find employees.</div>
+              </div>
+            </section>
 
-          <!-- Employee Questions Results -->
-          <div
-            id="emp-results"
-            style="display: none; margin-bottom: var(--space-6)"
-          >
-            <h3 style="margin-bottom: var(--space-3); font-size: 16px">
-              Assigned Questions
-            </h3>
-            <div
-              id="emp-questions-list"
-              style="display: flex; flex-direction: column; gap: var(--space-3)"
-            >
-              <!-- Populated by JS -->
-            </div>
-          </div>
+            <section class="spy-panel">
+              <div class="spy-panel-header">
+                <div>
+                  <h2 id="orders-title">Orders</h2>
+                  <p id="orders-subtitle">Select an employee first.</p>
+                </div>
+              </div>
+              <div class="spy-search">
+                <input
+                  type="search"
+                  id="order-search"
+                  class="input"
+                  placeholder="Search selected employee's orders"
+                  oninput="renderOrders()"
+                  disabled
+                />
+              </div>
+              <div id="orders-list" class="spy-list">
+                <div class="spy-empty">No employee selected.</div>
+              </div>
+            </section>
 
-          <!-- Read-only chat view -->
-          <div id="spy-view" style="display: none">
-            <div class="card" style="padding: 0; overflow: hidden">
-              <div class="chat-panel-header" id="spy-header">
-                Thread — Read Only
+            <section class="spy-panel spy-chat-panel" id="spy-view">
+              <div class="spy-panel-header">
+                <div>
+                  <h2 id="spy-header">Chat</h2>
+                  <p id="spy-subtitle">Choose a chat from an order.</p>
+                </div>
+                <span id="chat-status" class="expert-chat-header-sub"></span>
               </div>
               <div
                 id="spy-messages"
                 class="chat-messages-area"
-                style="height: 480px; overflow-y: auto"
-              ></div>
-              <div
-                style="
-                  padding: var(--space-4);
-                  background: var(--color-gray-50);
-                  border-top: 1px solid var(--color-gray-100);
-                  font-size: 13px;
-                  color: var(--color-gray-500);
-                  text-align: center;
-                "
+                data-spy-mode="true"
+                data-empty-message="No chats"
               >
-                👁 You are in read-only mode. Participants cannot see you.
+                <div class="spy-empty">No chat open.</div>
               </div>
-            </div>
+              <div class="spy-readonly-note">
+                Read-only mode. Participants cannot see you.
+              </div>
+            </section>
           </div>
         </div>
       </main>
@@ -263,134 +252,269 @@
       document.querySelector('[data-page="chat-spy"]')?.classList.add("active");
 
       let spyUserId = null;
+      let employeeSearchTimeout = null;
+      let employeeResults = [];
+      let selectedEmployeeId = null;
+      let selectedEmployee = null;
+      let selectedOrders = [];
+      let activeThreadId = null;
 
       async function init() {
         const me = await apiFetch("/auth/me").then((r) => r.json());
         spyUserId = me.id;
-        loadThreads();
       }
 
-      async function loadThreads() {
-        const res = await apiFetch("/superadmin/threads");
-        const threads = await res.json();
-        const select = document.getElementById("thread-select");
-
-        select.innerHTML =
-          `<option value="">— Select a thread —</option>` +
-          threads
-            .map(
-              (t) => `
-        <option value="${t._id}">
-          ${t.thread_type === "A" ? "Student ↔ Admin" : "Expert ↔ Admin"}
-          — ${escapeHtml(t.question_title)} (${t._id.slice(-6)})
-        </option>
-      `,
-            )
-            .join("");
+      async function ensureSpyUserId() {
+        if (spyUserId) return spyUserId;
+        const me = await apiFetch("/auth/me").then((r) => r.json());
+        spyUserId = me.id;
+        return spyUserId;
       }
 
-      function openThread() {
-        const threadId = document.getElementById("thread-select").value;
-        if (!threadId) {
-          toast("Select a thread first.", "warning");
+      function resetSelectedEmployee() {
+        selectedEmployeeId = null;
+        selectedEmployee = null;
+        selectedOrders = [];
+        activeThreadId = null;
+        document.getElementById("orders-title").textContent = "Orders";
+        document.getElementById("orders-subtitle").textContent =
+          "Select an employee first.";
+        document.getElementById("order-search").value = "";
+        document.getElementById("order-search").disabled = true;
+        document.getElementById("orders-list").innerHTML =
+          `<div class="spy-empty">No employee selected.</div>`;
+        resetSpyView();
+      }
+
+      function resetSpyView() {
+        destroyChat();
+        activeThreadId = null;
+        const messages = document.getElementById("spy-messages");
+        delete messages.dataset.rightSenderId;
+        document.getElementById("spy-header").textContent = "Chat";
+        document.getElementById("spy-subtitle").textContent =
+          "Choose a chat from an order.";
+        messages.innerHTML = `<div class="spy-empty">No chat open.</div>`;
+      }
+
+      function renderEmployeeResults() {
+        const list = document.getElementById("employee-results");
+
+        if (!employeeResults.length) {
+          list.innerHTML = `<div class="spy-empty">No employees found.</div>`;
           return;
         }
-        const selected = document.getElementById("thread-select");
-        const label = selected.options[selected.selectedIndex].text;
-        openSpyThread(threadId, label);
+
+        list.innerHTML = employeeResults
+          .map((employee) => {
+            const isActive = employee.id === selectedEmployeeId;
+            return `
+              <button
+                type="button"
+                class="spy-list-item ${isActive ? "active" : ""}"
+                onclick="selectEmployee('${employee.id}')"
+              >
+                <span class="spy-list-title">${escapeHtml(employee.name)}</span>
+                <span class="spy-list-sub">${escapeHtml(employee.email || "")}</span>
+              </button>
+            `;
+          })
+          .join("");
       }
 
-      function openSpyThread(threadId, label) {
-        // Destroy previous spy session
-        destroyChat();
-        document.getElementById("spy-messages").innerHTML = "";
-
-        // Show the spy view
-        document.getElementById("spy-view").style.display = "block";
-        document.getElementById("spy-header").textContent =
-          `👁 Monitoring: ${label}`;
-
-        // Use initStudentChat (which handles a single thread) for read only spy mode
-        initStudentChat(threadId, spyUserId, "spy-messages");
-      }
-
-      let searchTimeout;
-      function handleEmployeeSearchInput() {
-        clearTimeout(searchTimeout);
-        const query = document.getElementById("emp-search").value.trim();
-
-        searchTimeout = setTimeout(async () => {
-          if (query.length > 0) {
-            searchEmployeeQuestions();
-          } else {
-            document.getElementById("emp-results").style.display = "none";
-          }
-        }, 300);
-      }
-
-      async function searchEmployeeQuestions() {
+      async function searchEmployees() {
         const query = document.getElementById("emp-search").value.trim();
         if (!query) {
+          employeeResults = [];
+          document.getElementById("employee-results").innerHTML =
+            `<div class="spy-empty">Start typing to find employees.</div>`;
+          resetSelectedEmployee();
           return;
         }
+
+        const list = document.getElementById("employee-results");
+        list.innerHTML = `<div class="spy-empty">Searching employees...</div>`;
 
         try {
           const res = await apiFetch(
-            `/superadmin/spy/employee-questions?q=${encodeURIComponent(query)}`,
+            `/superadmin/spy/search-employees?q=${encodeURIComponent(query)}`,
           );
-
-          if (!res.ok) {
+          if (!res?.ok) {
             const data = await res.json();
-            throw new Error(
-              data.error || "Failed to fetch employee questions.",
-            );
+            throw new Error(data.error || "Failed to search employees.");
           }
 
-          const questions = await res.json();
-          const resultsContainer = document.getElementById("emp-results");
-          const list = document.getElementById("emp-questions-list");
-
-          resultsContainer.style.display = "block";
-          list.innerHTML = "";
-
-          if (questions.length === 0) {
-            list.innerHTML = `<div class="card"><p>No questions found for matching employees.</p></div>`;
-            return;
-          }
-
-          questions.forEach((q) => {
-            let btnsHtml = "";
-            if (q.student_thread_id) {
-              btnsHtml += `<button class="btn btn-primary btn-sm" onclick="openSpyThread('${q.student_thread_id}', 'Student ↔ Admin — ${escapeHtml(q.title)}')">Monitor Student Chat</button>`;
-            }
-            if (q.expert_thread_id) {
-              btnsHtml += `<button class="btn btn-secondary btn-sm" onclick="openSpyThread('${q.expert_thread_id}', 'Expert ↔ Admin — ${escapeHtml(q.title)}')">Monitor Expert Chat</button>`;
-            }
-
-            list.innerHTML += `
-                        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <h4 style="margin:0 0 4px 0">${escapeHtml(q.title)}</h4>
-                                <div style="font-size:12px; color:var(--color-gray-500)">
-                                    <span class="badge badge-${statusClass(q.status)}">${formatStatus(q.status)}</span>
-                                    <span style="margin-left:8px">${escapeHtml(q.domain)}</span>
-                                    <span style="margin-left:8px; color: var(--brand-primary); font-weight: 500;">Assigned to: ${escapeHtml(q.employee_name)}</span>
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:var(--space-2)">
-                                ${btnsHtml || '<span style="font-size:12px; color:var(--color-gray-500)">No active threads</span>'}
-                            </div>
-                        </div>
-                    `;
-          });
+          employeeResults = await res.json();
+          renderEmployeeResults();
         } catch (err) {
+          employeeResults = [];
+          list.innerHTML = `<div class="spy-empty">Employee search failed.</div>`;
           toast(err.message, "error");
         }
       }
 
+      function handleEmployeeSearchInput() {
+        clearTimeout(employeeSearchTimeout);
+        employeeSearchTimeout = setTimeout(searchEmployees, 250);
+      }
+
+      async function selectEmployee(employeeId) {
+        selectedEmployeeId = employeeId;
+        selectedEmployee =
+          employeeResults.find((employee) => employee.id === employeeId) ||
+          null;
+        selectedOrders = [];
+        renderEmployeeResults();
+        resetSpyView();
+
+        document.getElementById("orders-title").textContent =
+          selectedEmployee?.name || "Orders";
+        document.getElementById("orders-subtitle").textContent =
+          selectedEmployee?.email || "Assigned orders";
+        document.getElementById("orders-list").innerHTML =
+          `<div class="spy-empty">Loading orders...</div>`;
+        document.getElementById("order-search").value = "";
+        document.getElementById("order-search").disabled = true;
+
+        try {
+          const res = await apiFetch(
+            `/superadmin/spy/employees/${employeeId}/orders`,
+          );
+          if (!res?.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Failed to load employee orders.");
+          }
+
+          const payload = await res.json();
+          selectedEmployee = payload.employee || selectedEmployee;
+          selectedOrders = payload.orders || [];
+          document.getElementById("orders-title").textContent =
+            selectedEmployee?.name || "Orders";
+          document.getElementById("orders-subtitle").textContent =
+            `${selectedOrders.length} assigned order${selectedOrders.length === 1 ? "" : "s"}`;
+          document.getElementById("order-search").disabled = false;
+          renderOrders();
+        } catch (err) {
+          selectedOrders = [];
+          document.getElementById("orders-list").innerHTML =
+            `<div class="spy-empty">Could not load orders.</div>`;
+          toast(err.message, "error");
+        }
+      }
+
+      function orderMatchesSearch(order, query) {
+        if (!query) return true;
+        const haystack = [
+          order.title,
+          order.description,
+          order.status,
+          order.domain,
+          order.question_id,
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query.toLowerCase());
+      }
+
+      function renderOrders() {
+        const list = document.getElementById("orders-list");
+        const query = document.getElementById("order-search").value.trim();
+        const orders = selectedOrders.filter((order) =>
+          orderMatchesSearch(order, query),
+        );
+
+        if (!selectedEmployeeId) {
+          list.innerHTML = `<div class="spy-empty">No employee selected.</div>`;
+          return;
+        }
+
+        if (!orders.length) {
+          list.innerHTML = `<div class="spy-empty">No matching orders.</div>`;
+          return;
+        }
+
+        list.innerHTML = orders
+          .map((order) => {
+            const status = order.status || "unknown";
+            const studentDisabled = order.student_thread_id ? "" : "disabled";
+            const expertDisabled = order.expert_thread_id ? "" : "disabled";
+            const studentActive =
+              activeThreadId && activeThreadId === order.student_thread_id;
+            const expertActive =
+              activeThreadId && activeThreadId === order.expert_thread_id;
+
+            return `
+              <article class="spy-order">
+                <div class="spy-order-main">
+                  <h3>${escapeHtml(order.title || "Untitled Question")}</h3>
+                  <div class="spy-order-meta">
+                    <span class="badge badge-${statusClass(status)}">${formatStatus(status)}</span>
+                    <span>${escapeHtml(order.domain || "Unknown domain")}</span>
+                    <span>${formatDate(order.created_at)}</span>
+                  </div>
+                </div>
+                <div class="spy-order-actions">
+                  <button
+                    type="button"
+                    class="btn ${studentActive ? "btn-primary" : "btn-secondary"} btn-sm"
+                    ${studentDisabled}
+                    onclick="openOrderThread('${order.question_id}', 'student')"
+                  >
+                    Chats with student
+                  </button>
+                  <button
+                    type="button"
+                    class="btn ${expertActive ? "btn-primary" : "btn-secondary"} btn-sm"
+                    ${expertDisabled}
+                    onclick="openOrderThread('${order.question_id}', 'expert')"
+                  >
+                    Chats with expert
+                  </button>
+                </div>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function openOrderThread(questionId, chatType) {
+        const order = selectedOrders.find(
+          (item) => item.question_id === questionId,
+        );
+        if (!order) {
+          toast("Order not found.", "error");
+          return;
+        }
+
+        const isStudentChat = chatType === "student";
+        openSpyThread(
+          isStudentChat ? order.student_thread_id : order.expert_thread_id,
+          isStudentChat ? "Chats with student" : "Chats with expert",
+          order.title || "Untitled Question",
+        );
+      }
+
+      async function openSpyThread(threadId, label, orderTitle) {
+        if (!threadId) {
+          toast("This chat thread is not available yet.", "warning");
+          return;
+        }
+
+        destroyChat();
+        activeThreadId = threadId;
+        renderOrders();
+        document.getElementById("spy-header").textContent = label;
+        document.getElementById("spy-subtitle").textContent =
+          orderTitle || "Read-only thread";
+        const messages = document.getElementById("spy-messages");
+        messages.dataset.rightSenderId = selectedEmployee?.user_id || "";
+        messages.innerHTML = `<div class="spy-empty">Fetching chat...</div>`;
+        await ensureSpyUserId();
+        initStudentChat(threadId, spyUserId, "spy-messages");
+      }
+
       init();
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="/js/notifications.js"></script>
   </body>
 </html>
