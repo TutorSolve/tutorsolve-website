@@ -1894,21 +1894,37 @@ def spy_employee_orders(employee_id):
 
     user = db.users.find_one({"_id": employee.get("user_id")})
     orders = list(
-        db.questions.find({"assigned_employee_id": employee["_id"]})
+        db.questions.find(
+            {"assigned_employee_id": employee["_id"]},
+            {
+                "title": 1,
+                "description": 1,
+                "status": 1,
+                "domain": 1,
+                "domain_id": 1,
+                "created_at": 1,
+            },
+        )
         .sort("created_at", -1)
         .limit(300)
     )
 
+    order_ids = [question["_id"] for question in orders]
+    threads_by_question = {}
+    if order_ids:
+        for thread in db.threads.find(
+            {
+                "question_id": {"$in": order_ids},
+                "thread_type": {"$in": ["A", "B"]},
+            },
+            {"question_id": 1, "thread_type": 1},
+        ):
+            question_threads = threads_by_question.setdefault(thread["question_id"], {})
+            question_threads[thread.get("thread_type")] = thread["_id"]
+
     result = []
     for question in orders:
-        student_thread = db.threads.find_one({
-            "question_id": question["_id"],
-            "thread_type": "A",
-        })
-        expert_thread = db.threads.find_one({
-            "question_id": question["_id"],
-            "thread_type": "B",
-        })
+        question_threads = threads_by_question.get(question["_id"], {})
 
         result.append({
             "question_id": str(question["_id"]),
@@ -1921,8 +1937,8 @@ def spy_employee_orders(employee_id):
                 fallback_name=question.get("domain"),
             ),
             "created_at": _as_iso(question.get("created_at")),
-            "student_thread_id": str(student_thread["_id"]) if student_thread else None,
-            "expert_thread_id": str(expert_thread["_id"]) if expert_thread else None,
+            "student_thread_id": str(question_threads.get("A")) if question_threads.get("A") else None,
+            "expert_thread_id": str(question_threads.get("B")) if question_threads.get("B") else None,
         })
 
     return jsonify({
